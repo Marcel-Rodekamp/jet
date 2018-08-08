@@ -135,7 +135,7 @@ class FileWriter{
                             for(int y = 0; y < gridAcc.getMaxSitesPerDirection(); y += accuracy){
 
                             Site site(x,y);
-                            file << x << "\t" << y << "\t" << gridAcc.getSite(site);
+                            file << x << "\t" << y << "\t" << gridAcc.getSite(site) << std::endl;
 
 
                             }
