@@ -4,6 +4,7 @@
 #include<cmath>
 #include<complex>
 #include <vector>
+#include <ctime>
 
 #define PREC double
 
@@ -11,14 +12,14 @@ struct Site;
 template<class floatT> class GridAccessor;
 template<class floatT> class Grid;
 
+// structure to define the lattice points leaving out the z component due to the contemplated event plane
 struct Site{
        std::vector<int> VCoordinates;
 
        // constructor
-       Site(int x, int y, int z){
+       Site(int x, int y){
               VCoordinates.push_back(x);
               VCoordinates.push_back(y);
-              VCoordinates.push_back(z);
        }
 };
 
@@ -32,8 +33,7 @@ class GridAccessor{
 
               int getIndex(Site site){
                      int max = _grid._maxSitesPerDirection;
-                     return site.VCoordinates[0] + site.VCoordinates[1] + site.VCoordinates[2] + site.VCoordinates[1]*max
-                                   + site.VCoordinates[2]*(2*max + max*max);
+                     return site.VCoordinates[0] + site.VCoordinates[1] + site.VCoordinates[1]*max;
               }
 
               void setSite(Site site, floatT Ncoll){
@@ -61,13 +61,10 @@ class Grid{
        public:
               //constructor
               Grid(int maxSitesPerDirection) :
-                                   _VData( 3*maxSitesPerDirection
-                                   + 3*maxSitesPerDirection*maxSitesPerDirection
-                                   + maxSitesPerDirection * maxSitesPerDirection * maxSitesPerDirection
-                                   + 1 ){
-
-                     _maxSitesPerDirection = maxSitesPerDirection;
-              }
+                                   _VData( 2*maxSitesPerDirection
+                                          + maxSitesPerDirection*maxSitesPerDirection
+                                          + 1 ) ,
+                                   _maxSitesPerDirection(maxSitesPerDirection) {}
 
               GridAccessor<floatT> getAccsessor(){
                      GridAccessor<floatT> newGridAccessor(*this);
@@ -85,10 +82,8 @@ class FileWriter{
               int _NNucleonsCore;
        public:
               // constructor
-              FileWriter(int newNEvents, int newNNucleonsCore){
-                     _NEvents = newNEvents;
-                     _NNucleonsCore = newNNucleonsCore;
-              }
+              FileWriter(int newNEvents, int newNNucleonsCore) : _NEvents(newNEvents) ,
+                                                        _NNucleonsCore(newNNucleonsCore) {}
 
               void readFile(GridAccessor<floatT> gridAcc ,std::string filename){
                      std::fstream file;
@@ -96,7 +91,7 @@ class FileWriter{
 
                      if(!file.is_open()){return;}
 
-                     std::vector<floatT> row;
+                     std::vector<floatT> row(4);
 
                      // loop through the data file which format is clarified by
                      // x corrd \t y coord \t z coord \t NColl
@@ -104,17 +99,18 @@ class FileWriter{
                             for(int col = 0; col < 4 ; ++col){
                                    file >> row[col];
                             }
+                            // translate the euclidean coordinates into the grid coordinates
+                            // leaving out the z component
                             int x = (row[0] + 15)*100;
                             int y = (row[1] + 15)*100;
-                            int z = (row[2] + 15)*100;
 
                             if(x > gridAcc.getMaxSitesPerDirection() ||
-                                   y > gridAcc.getMaxSitesPerDirection() ||
-                                   z > gridAcc.getMaxSitesPerDirection()){
+                               y > gridAcc.getMaxSitesPerDirection()  ) {
                                           std::cout << "ERROR@readFile: Coordinates out of grid!" << '\n';
-                                   }
+                            }
+
                             // compute the site
-                            Site site(x, y, z);
+                            Site site(x, y);
 
                             // set NColl on the grid
                             gridAcc.setSite(site, row[3]);
@@ -142,67 +138,95 @@ class EnergyDensity{
               Grid<floatT> _grid;
               Grid<floatT> _gridSmeared;
               floatT _NNCross;
+              floatT _RadNucleon;
 
        public:
               // constructor
-              EnergyDensity(floatT newNNCross, int elems) : _grid(elems) , _gridSmeared(elems){
-                     _NNCross = newNNCross;
+              EnergyDensity(floatT newNNCross, int elems) : _grid(elems) , _gridSmeared(elems),
+                                   _NNCross(newNNCross), _RadNucleon(std::sqrt(newNNCross)*0.178412*100) {}
+                                                         // the factor 0.178412 is a conversion factor
+                                                         // from cross section to radius in fm.
+                                                         // the factor 100 is necessary due to the grid size
+
+
+
+              // calculate energy density in MeV from NColl
+              // (15.0 -> C. Schmidt, 800.0 -> Dinner N. Borghini & ???)
+              void energyDensity(GridAccessor<floatT> gridAcc){
+
+                     floatT EDens = 0;
+
+                     for (int y = 0; y < _grid.getAccsessor().getMaxSitesPerDirection(); y++) {
+                            for (int x = 0; x < _grid.getAccsessor().getMaxSitesPerDirection(); x++) {
+                                   Site site(x,y);
+                                   int NColl = (int) gridAcc.getSite(site);
+
+                                   // 15 * 800 * NColl^4 / 46^4
+              	              EDens = 0.002680093338717343 * NColl * NColl * NColl * NColl;
+
+                                   _grid.getAccsessor().setSite(site,EDens);
+                            }
+                     }
+
+
               }
 
-              // calculate energy density in MeV from NColl (15.0 -> C. Schmidt, 800.0 -> Dinner N. Borghini & ???)
-              void energyDensity(GridAccessor<floatT> gridAcc, Site site){
-                     int NColl = (int) gridAcc.getSite(site);
 
-              	floatT EDens = 15.0*((floatT) NColl/46.0)*((floatT) NColl/46.0)
-                                   *((floatT) NColl/46.0)*((floatT) NColl/46.0)*800.0;
-
-                     _grid.getAccsessor().setSite(site,EDens);
-              }
-
-              //// nucleon radius in fm from cross section
-              //floatT RadiusNucleon(floatT NNCross){
-              //       floatT RadNucleon = std::sqrt(NNCross)*0.178412;
-              //       return RadNucleon;
-              //}
 };
 
 
 int main(int argc, char const *argv[]) {
+       std::clock_t start;
+       double duration;
+
+       start = std::clock();
+
        // number of events
        int NEvents;
 
        std::cout << "Number of events: \n";
+
        std::cin >> NEvents;
 
        // number of nucleons in the core of the element, e.g. 208 for Pb
        int NNucleonsCore;
 
        std::cout << "Number of nucleons per core: \n";
+
        std::cin >> NNucleonsCore;
 
        // nucleon nucleon cross section for nucleon radius
        PREC NNCross;
 
        std::cout << "Nucleon Nucleon cross section in mb: \n";
+
        std::cin >> NNCross;
 
        int elems = 3001;
 
-       Grid<PREC> grid(elems);
-       EnergyDensity<PREC> energDens(NNCross, grid.getAccsessor().getMaxSitesPerDirection());
+       std::cout << "Initializing the data grid" << '\n';
+
+       Grid<PREC> rawDataGrid(elems);
+
+       std::cout << "Initializing the energy density computation" << '\n';
+
+       EnergyDensity<PREC> energDens(NNCross, rawDataGrid.getAccsessor().getMaxSitesPerDirection());
+
+       std::cout << "Read data " << '\n';
+
        FileWriter<PREC> file(NEvents,NNucleonsCore);
 
        std::string filename = "Test.dat";
 
-       file.readFile(grid.getAccsessor(), filename);
+       file.readFile(rawDataGrid.getAccsessor(), filename);
 
-       for (int y = 0; y < elems; y++) {
-              for (int x = 0; x < elems; x++) {
-                     Site site(x,y,0);
-                     energDens.energyDensity(grid.getAccsessor(), site);
-              }
-       }
+       std::cout << "Compute energy density" << '\n';
 
+       energDens.energyDensity(rawDataGrid.getAccsessor());
+
+       duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+
+       std::cout<< duration <<'\n';
 
        return 0;
 }
