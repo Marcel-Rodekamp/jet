@@ -21,6 +21,7 @@ struct Site{
               VCoordinates.push_back(x);
               VCoordinates.push_back(y);
        }
+
 };
 
 // class to accsess the data
@@ -185,11 +186,11 @@ class EnergyDensity{
                      return _gridSmeared.getAccsessor();
               }
 
-              void smearedEnergyDensity(GridAccessor<floatT> gridAcc){
+              void smearedEnergyDensity(){
                      for (int y = 0; y < _grid.getAccsessor().getMaxSitesPerDirection(); y++) {
                             for (int x = 0; x < _grid.getAccsessor().getMaxSitesPerDirection(); x++) {
                                    Site site(x, y);
-                                   if (gridAcc.getSite(site) != 0 ) {
+                                   if (_grid.getAccsessor().getSite(site) != 0 ) {
                                           for (int ynew = 0; ynew < _gridSmeared.getAccsessor().getMaxSitesPerDirection(); ynew++) {
                                                  for (int xnew = 0; xnew < _gridSmeared.getAccsessor().getMaxSitesPerDirection(); xnew++) {
                                                         if (_RadNucleon > std::hypot((x - xnew),(y - ynew))) {
@@ -244,7 +245,7 @@ int main(int argc, char const *argv[]) {
 
        std::cout << "Read data " << '\n';
 
-       std::string filename = "Test.dat";
+       std::string filename = "Pb67.6.txt";
 
        FileWriter<PREC> file(NEvents,NNucleonsCore, filename);
 
@@ -253,6 +254,10 @@ int main(int argc, char const *argv[]) {
        std::cout << "Compute energy density" << '\n';
 
        energDens.energyDensity(rawDataGrid.getAccsessor());
+
+       std::cout << "Smear energy density" << '\n';
+
+       energDens.smearedEnergyDensity();
 
        duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
 
