@@ -47,7 +47,6 @@ class GridAccessor{
               int getMaxSitesPerDirection(){
                      return _grid._maxSitesPerDirection;
               }
-
 };
 
 // class to store the data
@@ -101,7 +100,7 @@ class FileWriter{
 
                      std::vector<floatT> row;
 
-                     // loop through the data file which format is clarifight by
+                     // loop through the data file which format is clarified by
                      // x corrd \t y coord \t z coord \t NColl
                      for(int i = 0; i < 2 * _NEvents * _NNucleonsCore; ++i){
                             for(int col = 0; col < 4 ; ++col){
@@ -127,20 +126,72 @@ class FileWriter{
 
                      file.close();
               }
+
+              //void writeFileEDens(std::string filename, ){
+              //       std::fstream file;
+              //       file.open(filename.c_str(), std::ios::out);
+
+              //       if (file.is_open())
+              //       {
+              //              file << "This is another line.\n";
+              //              file.close();
+              //       }
+              //       else cout << "Unable to open file";
+              //}
 };
 
+template<class floatT>
+class EnergyDensity{
+       private:
+              GridAccessor<floatT> & _gridAcc;
+              Grid<floatT> _grid;
+              Grid<floatT> _gridSmeared;
+              floatT _NNCross;
+
+       public:
+              // constructor
+              EnergyDensity(GridAccessor<floatT> & gridAcc, floatT newNNCross): _gridAcc(gridAcc){
+                     Grid<floatT> _grid(gridAcc.getMaxSitesPerDirection());
+                     Grid<floatT> _gridSmeared(gridAcc.getMaxSitesPerDirection());
+                     _NNCross = newNNCross;
+              }
+
+              // calculate energy density in MeV from NColl (15.0 -> C. Schmidt, 800.0 -> Dinner N. Borghini & ???)
+              void energyDensity(Site site){
+                     int NColl = (int) _gridAcc.getSite(site);
+
+              	floatT EDens = 15.0*((floatT) NColl/46.0)*((floatT) NColl/46.0)
+                                   *((floatT) NColl/46.0)*((floatT) NColl/46.0)*800.0;
+
+                     _grid.getAccsessor().setSite(site,EDens);
+              }
+
+              //// nucleon radius in fm from cross section
+              //floatT RadiusNucleon(floatT NNCross){
+              //       floatT RadNucleon = std::sqrt(NNCross)*0.178412;
+              //       return RadNucleon;
+              //}
+};
+
+
 int main(int argc, char const *argv[]) {
-       //number of events
+       // number of events
        int NEvents;
 
        std::cout << "Number of events: \n";
        std::cin >> NEvents;
 
-       //number of nucleons in the core of the element, e.g. 208 for Pb
+       // number of nucleons in the core of the element, e.g. 208 for Pb
        int NNucleonsCore;
 
        std::cout << "Number of nucleons per core: \n";
        std::cin >> NNucleonsCore;
+  
+       // nucleon nucleon cross section for nucleon radius
+       PREC NNCross;
+
+       std::cout << "Nucleon Nucleon cross section in mb: \n";
+       std::cin >> NNCross;
 
        int elems = 4;
 
