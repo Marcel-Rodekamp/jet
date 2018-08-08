@@ -210,8 +210,6 @@ int main(int argc, char const *argv[]) {
        std::clock_t start;
        double duration;
 
-       start = std::clock();
-
        // number of events
        int NEvents;
 
@@ -232,6 +230,8 @@ int main(int argc, char const *argv[]) {
        std::cout << "Nucleon Nucleon cross section in mb: \n";
 
        std::cin >> NNCross;
+
+       start = std::clock();
 
        int elems = 3001;
 
@@ -258,6 +258,8 @@ int main(int argc, char const *argv[]) {
        std::cout << "Smear energy density" << '\n';
 
        energDens.smearedEnergyDensity();
+
+       file.writeFileEDens(energDens.getSmearedEnergyDensData());
 
        duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
 
