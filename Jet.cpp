@@ -108,7 +108,7 @@ class FileWriter{
                             }
 
                             // compute the site
-                            Site site(row[0], row[1], row[2]);
+                            Site site((row[0] + 15)*100, (row[1] + 15)*100, (row[2] + 15)*100);
 
                             // set NColl on the grid
                             .setSite(site, row[3]);
