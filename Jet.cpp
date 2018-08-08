@@ -84,10 +84,10 @@ class FileWriter{
        private:
               int _NEvents;
               int _NNucleonsCore;
-              GridAccessor<floatT> & _gridAcc;
+              GridAccessor<floatT> _gridAcc;
        public:
               // constructor
-              FileWriter(GridAccessor<floatT> & newGridAcc, int newNEvents, int newNNucleonsCore) : _gridAcc(newGridAcc) {
+              FileWriter(GridAccessor<floatT> newGridAcc, int newNEvents, int newNNucleonsCore) : _gridAcc(newGridAcc) {
                      _NEvents = newNEvents;
                      _NNucleonsCore = newNNucleonsCore;
               }
@@ -102,16 +102,16 @@ class FileWriter{
 
                      // loop through the data file which format is clarifight by
                      // x corrd \t y coord \t z coord \t NColl
-                     for(int i = 0; i < 2 * NEvents * NNucleonsCore; ++i){
-                            for(int col = 0; col < 4 ; ++j){
-                                   file >> row[j];
+                     for(int i = 0; i < 2 * _NEvents * _NNucleonsCore; ++i){
+                            for(int col = 0; col < 4 ; ++col){
+                                   file >> row[col];
                             }
 
                             // compute the site
                             Site site(row[0], row[1], row[2]);
 
                             // set NColl on the grid
-                            .setSite(site, row[3]);
+                            _gridAcc.setSite(site, row[3]);
                      }
 
                      file.close();
@@ -138,7 +138,7 @@ int main(int argc, char const *argv[]) {
        int max = 3;
 
        Grid<PREC> grid(max);
-       FileWriter<PREC> fileWriter(& grid.getAccsessor(), NEvents, NNucleonsCore);
+       FileWriter<PREC> fileWriter(grid.getAccsessor(), NEvents, NNucleonsCore);
 
        std::string fileName = "Pb67.6.txt";
        fileWriter.readFile(fileName);
