@@ -43,6 +43,8 @@ class GridAccessor{
               floatT getSite(Site site){
                      return _grid._VData.at(getIndex(site));
               }
+
+              ~GridAccessor();
 };
 
 // class to store the data
@@ -54,14 +56,12 @@ class Grid{
 
               // number of sites in the 3 spartial directions (only cubic grids are allowed)
               int _maxSitesPerDirection;
+              int _elems;
        public:
               //constructor
-              Grid(int maximalSites){
-                     _maxSitesPerDirection = maximalSites;
-
-                     // compute the number of elemes
-                     int elems = 3*maximalSites + 3 * maximalSites * maximalSites + maximalSites *
-                                   maximalSites * maximalSites + 1;
+              Grid(int elems, int maxSitesPerDirection) : _VData(elems){
+                     _maxSitesPerDirection = maxSitesPerDirection;
+                     _elems = elems;
 
                      // allocate a temporaty vector with zero's
                      std::vector<floatT> tmpVector(elems);
@@ -77,6 +77,9 @@ class Grid{
                      GridAccessor<floatT> newGridAccessor(*this);
                      return newGridAccessor;
               }
+
+              ~Grid();
+
        friend class GridAccessor<floatT>;
 };
 
@@ -118,6 +121,8 @@ class FileWriter{
 
                      file.close();
               }
+              
+              ~FileWriter();
 };
 
 
@@ -135,7 +140,7 @@ void indexerTest(int max){
                      }
               }
        }
-       
+
        //loop over all sites
        for (size_t z = 0; z <= max; z++) {
               for (size_t y = 0; y <= max; y++) {
@@ -179,27 +184,4 @@ int main(int argc, char const *argv[]) {
 
 // Test indexer:
 
-void indexerTest(int max){
-       Grid<PREC> grid(max);
-
-       std::cout << "xyz" << '\n';
-       for (size_t z = 0; z <= max; z++) {
-              for (size_t y = 0; y <= max; y++) {
-                     for (size_t x = 0; x <= max; x++) {
-                            Site si(x,y,z);
-                            grid.getAccsessor().setSite(si, grid.getAccsessor().getIndex(si));
-                     }
-              }
-       }
-       for (size_t z = 0; z <= max; z++) {
-              for (size_t y = 0; y <= max; y++) {
-                     for (size_t x = 0; x <= max; x++) {
-                            Site si(x,y,z);
-                            std::cout << x << y << z << "\t" << grid.getAccsessor().getIndex(si)
-                                   - grid.getAccsessor().getSite(si) << '\n';
-
-                     }
-              }
-       }
-}
 */
