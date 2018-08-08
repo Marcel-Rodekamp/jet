@@ -140,13 +140,18 @@ class EnergyDensity{
               GridAccessor<floatT> & _gridAcc;
               Grid<floatT> _grid;
               Grid<floatT> _gridSmeared;
-              floatT NNCross;
+              floatT _NNCross;
 
        public:
               // constructor
+              EnergyDensity(GridAccessor<floatT> & gridAcc, floatT newNNCross): _gridAcc(gridAcc){
+                     Grid<floatT> _grid(gridAcc.getMaxSitesPerDirection());
+                     Grid<floatT> _gridSmeared(gridAcc.getMaxSitesPerDirection());
+                     _NNCross = newNNCross;
+              }
 
               // calculate energy density in MeV from NColl (15.0 -> C. Schmidt, 800.0 -> Dinner N. Borghini & ???)
-              void EnergyDensity(Site site){
+              void energyDensity(Site site){
                      int NColl = (int) _gridAcc.getSite(site);
 
               	floatT EDens = 15.0*((floatT) NColl/46.0)*((floatT) NColl/46.0)
