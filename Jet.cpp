@@ -60,8 +60,8 @@ class Grid{
               int _maxSitesPerDirection;
        public:
               //constructor
-              Grid(int maxSitesPerDirection) : _VData(
-                                     3*maxSitesPerDirection
+              Grid(int maxSitesPerDirection) :
+                                   _VData( 3*maxSitesPerDirection
                                    + 3*maxSitesPerDirection*maxSitesPerDirection
                                    + maxSitesPerDirection * maxSitesPerDirection * maxSitesPerDirection
                                    + 1 ){
@@ -83,16 +83,14 @@ class FileWriter{
        private:
               int _NEvents;
               int _NNucleonsCore;
-              GridAccessor<floatT> & _gridAcc;
        public:
               // constructor
-              FileWriter(GridAccessor<floatT> & newGridAcc, int newNEvents, int newNNucleonsCore)
-                                          : _gridAcc(newGridAcc) {
+              FileWriter(int newNEvents, int newNNucleonsCore){
                      _NEvents = newNEvents;
                      _NNucleonsCore = newNNucleonsCore;
               }
 
-              void readFile(std::string filename){
+              void readFile(GridAccessor<floatT> gridAcc ,std::string filename){
                      std::fstream file;
                      file.open(filename.c_str(), std::ios::in);
 
@@ -110,18 +108,16 @@ class FileWriter{
                             int y = (row[1] + 15)*100;
                             int z = (row[2] + 15)*100;
 
-                            if(x > _gridAcc.getMaxSitesPerDirection() ||
-                                   y > _gridAcc.getMaxSitesPerDirection() ||
-                                   z > _gridAcc.getMaxSitesPerDirection()){
+                            if(x > gridAcc.getMaxSitesPerDirection() ||
+                                   y > gridAcc.getMaxSitesPerDirection() ||
+                                   z > gridAcc.getMaxSitesPerDirection()){
                                           std::cout << "ERROR@readFile: Coordinates out of grid!" << '\n';
                                    }
-
-
                             // compute the site
                             Site site(x, y, z);
 
                             // set NColl on the grid
-                            _gridAcc.setSite(site, row[3]);
+                            gridAcc.setSite(site, row[3]);
                      }
 
                      file.close();
@@ -143,22 +139,19 @@ class FileWriter{
 template<class floatT>
 class EnergyDensity{
        private:
-              GridAccessor<floatT> & _gridAcc;
               Grid<floatT> _grid;
               Grid<floatT> _gridSmeared;
               floatT _NNCross;
 
        public:
               // constructor
-              EnergyDensity(GridAccessor<floatT> & gridAcc, floatT newNNCross): _gridAcc(gridAcc){
-                     Grid<floatT> _grid(gridAcc.getMaxSitesPerDirection());
-                     Grid<floatT> _gridSmeared(gridAcc.getMaxSitesPerDirection());
+              EnergyDensity(floatT newNNCross, int elems) : _grid(elems) , _gridSmeared(elems){
                      _NNCross = newNNCross;
               }
 
               // calculate energy density in MeV from NColl (15.0 -> C. Schmidt, 800.0 -> Dinner N. Borghini & ???)
-              void energyDensity(Site site){
-                     int NColl = (int) _gridAcc.getSite(site);
+              void energyDensity(GridAccessor<floatT> gridAcc, Site site){
+                     int NColl = (int) gridAcc.getSite(site);
 
               	floatT EDens = 15.0*((floatT) NColl/46.0)*((floatT) NColl/46.0)
                                    *((floatT) NColl/46.0)*((floatT) NColl/46.0)*800.0;
@@ -186,16 +179,30 @@ int main(int argc, char const *argv[]) {
 
        std::cout << "Number of nucleons per core: \n";
        std::cin >> NNucleonsCore;
-  
+
        // nucleon nucleon cross section for nucleon radius
        PREC NNCross;
 
        std::cout << "Nucleon Nucleon cross section in mb: \n";
        std::cin >> NNCross;
 
-       int elems = 4;
+       int elems = 3001;
 
        Grid<PREC> grid(elems);
+       EnergyDensity<PREC> energDens(NNCross, grid.getAccsessor().getMaxSitesPerDirection());
+       FileWriter<PREC> file(NEvents,NNucleonsCore);
+
+       std::string filename = "Test.dat";
+
+       file.readFile(grid.getAccsessor(), filename);
+
+       for (int y = 0; y < elems; y++) {
+              for (int x = 0; x < elems; x++) {
+                     Site site(x,y,0);
+                     energDens.energyDensity(grid.getAccsessor(), site);
+              }
+       }
+
 
        return 0;
 }
