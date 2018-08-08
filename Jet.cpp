@@ -80,14 +80,16 @@ class FileWriter{
        private:
               int _NEvents;
               int _NNucleonsCore;
+              std::string _filename;
        public:
               // constructor
-              FileWriter(int newNEvents, int newNNucleonsCore) : _NEvents(newNEvents) ,
-                                                        _NNucleonsCore(newNNucleonsCore) {}
+              FileWriter(int newNEvents, int newNNucleonsCore, std::string newFilename) : _NEvents(newNEvents),
+                                                        _NNucleonsCore(newNNucleonsCore),
+                                                        _filename(newFilename) {}
 
-              void readFile(GridAccessor<floatT> gridAcc ,std::string filename){
+              void readFile(GridAccessor<floatT> gridAcc){
                      std::fstream file;
-                     file.open(filename.c_str(), std::ios::in);
+                     file.open(_filename.c_str(), std::ios::in);
 
                      if(!file.is_open()){return;}
 
@@ -119,17 +121,27 @@ class FileWriter{
                      file.close();
               }
 
-              //void writeFileEDens(std::string filename, ){
-              //       std::fstream file;
-              //       file.open(filename.c_str(), std::ios::out);
+              void writeFileEDens(GridAccessor<floatT> gridAcc, int accuracy = 10){
+                     std::fstream file;
+                     std::string newFilename;
+                     newFilename.append("smearedEnergyDensity_");
+                     newFilename.append(_filename);
+                     file.open(newFilename, std::ios::out);
 
-              //       if (file.is_open())
-              //       {
-              //              file << "This is another line.\n";
-              //              file.close();
-              //       }
-              //       else cout << "Unable to open file";
-              //}
+                     if(!file.is_open()){return;}
+
+                     for(int x = 0; x < gridAcc.getMaxSitesPerDirection(); x += accuracy){
+                            for(int y = 0; y < gridAcc.getMaxSitesPerDirection(); y += accuracy){
+
+                            Site site(x,y);
+                            file << x << "\t" << y << "\t" << gridAcc.getSite(site);
+
+
+                            }
+                     }
+
+                     file.close();
+              }
 };
 
 template<class floatT>
@@ -167,6 +179,10 @@ class EnergyDensity{
                                    _grid.getAccsessor().setSite(site,EDens);
                             }
                      }
+              }
+
+              GridAccessor<floatT> const getSmearedEnergyDensData(){
+                     return _gridSmeared.getAccsessor();
               }
 
               void smearedEnergyDensity(GridAccessor<floatT> gridAcc){
@@ -228,11 +244,11 @@ int main(int argc, char const *argv[]) {
 
        std::cout << "Read data " << '\n';
 
-       FileWriter<PREC> file(NEvents,NNucleonsCore);
-
        std::string filename = "Test.dat";
 
-       file.readFile(rawDataGrid.getAccsessor(), filename);
+       FileWriter<PREC> file(NEvents,NNucleonsCore, filename);
+
+       file.readFile(rawDataGrid.getAccsessor());
 
        std::cout << "Compute energy density" << '\n';
 
