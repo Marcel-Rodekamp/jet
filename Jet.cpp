@@ -45,6 +45,10 @@ class GridAccessor{
               floatT getSite(Site site){
                      return _grid -> _VData.at(getIndex(site));
               }
+
+              int getMaxSitesPerDirection(){
+                     return _grid._maxSitesPerDirection;
+              }
 };
 
 // class to store the data
@@ -139,9 +143,10 @@ class EnergyDensity{
               floatT NNCross;
 
        public:
+              // constructor
 
               // calculate energy density in MeV from NColl (15.0 -> C. Schmidt, 800.0 -> Dinner N. Borghini & ???)
-              floatT EnergyDensity(Site site){
+              void EnergyDensity(Site site){
                      int NColl = (int) _gridAcc.getSite(site);
 
               	floatT EDens = 15.0*((floatT) NColl/46.0)*((floatT) NColl/46.0)
@@ -172,7 +177,7 @@ int main(int argc, char const *argv[]) {
        std::cin >> NNucleonsCore;
 
        // nucleon nucleon cross section for nucleon radius
-       floatT NNCross;
+       PREC NNCross;
 
        std::cout << "Nucleon Nucleon cross section in mb: \n";
        std::cin >> NNCross;
