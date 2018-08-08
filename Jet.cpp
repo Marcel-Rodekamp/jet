@@ -167,11 +167,25 @@ class EnergyDensity{
                                    _grid.getAccsessor().setSite(site,EDens);
                             }
                      }
-
-
               }
 
-
+              void smearedEnergyDensity(GridAccessor<floatT> gridAcc){
+                     for (int y = 0; y < _grid.getAccsessor().getMaxSitesPerDirection(); y++) {
+                            for (int x = 0; x < _grid.getAccsessor().getMaxSitesPerDirection(); x++) {
+                                   Site site(x, y);
+                                   if (gridAcc.getSite(site) != 0 ) {
+                                          for (int ynew = 0; ynew < _gridSmeared.getAccsessor().getMaxSitesPerDirection(); ynew++) {
+                                                 for (int xnew = 0; xnew < _gridSmeared.getAccsessor().getMaxSitesPerDirection(); xnew++) {
+                                                        if (_RadNucleon > std::hypot((x - xnew),(y - ynew))) {
+                                                               Site siteNew(xnew,ynew);
+                                                               _gridSmeared.getAccsessor().setSite(siteNew,_grid.getAccsessor().getSite(site));
+                                                        }
+                                                 }
+                                          }
+                                   }
+                            }
+                     }
+              }
 };
 
 
