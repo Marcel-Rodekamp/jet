@@ -44,7 +44,10 @@ class GridAccessor{
                      return _grid._VData.at(getIndex(site));
               }
 
-              ~GridAccessor();
+              int getMaxSitesPerDirection(){
+                     return _grid._maxSitesPerDirection;
+              }
+
 };
 
 // class to store the data
@@ -69,16 +72,10 @@ class Grid{
                      _VData = tmpVector;
               }
 
-              int getMaxSitesPerDirection(){
-                     return _maxSitesPerDirection;
-              }
-
               GridAccessor<floatT> getAccsessor(){
                      GridAccessor<floatT> newGridAccessor(*this);
                      return newGridAccessor;
               }
-
-              ~Grid();
 
        friend class GridAccessor<floatT>;
 };
@@ -121,13 +118,11 @@ class FileWriter{
 
                      file.close();
               }
-              
-              ~FileWriter();
 };
 
 
 void indexerTest(int max){
-       Grid<PREC> grid(max);
+       Grid<PREC> grid(max, max*max*1);
 
        std::cout << "xyz" << '\n';
 
