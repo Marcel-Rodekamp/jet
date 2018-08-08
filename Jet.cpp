@@ -26,24 +26,22 @@ struct Site{
 template<class floatT>
 class GridAccessor{
        private:
-              Grid<floatT> * _grid;
+              Grid<floatT> & _grid;
        public:
-              GridAccessor(Grid<floatT> * newGrid){
-                     _grid = newGrid;
-              }
+              GridAccessor(Grid<floatT> & newGrid) : _grid(newGrid){}
 
               int getIndex(Site site){
-                     int max = _grid -> _maxSitesPerDirection;
+                     int max = _grid._maxSitesPerDirection;
                      return site.VCoordinates[0] + site.VCoordinates[1] + site.VCoordinates[2] + site.VCoordinates[1]*max
                                    + site.VCoordinates[2]*(2*max + max*max);
               }
 
               void setSite(Site site, floatT Ncoll){
-                     _grid -> _VData[getIndex(site)] = Ncoll;
+                     _grid._VData[getIndex(site)] = Ncoll;
               }
 
               floatT getSite(Site site){
-                     return _grid -> _VData.at(getIndex(site));
+                     return _grid._VData.at(getIndex(site));
               }
 };
 
@@ -71,11 +69,15 @@ class Grid{
                      _VData = tmpVector;
               }
 
+              int getMaxSitesPerDirection(){
+                     return _maxSitesPerDirection;
+              }
+
               GridAccessor<floatT> getAccsessor(){
-                     GridAccessor<floatT> newGridAccessor(this);
+                     GridAccessor<floatT> newGridAccessor(*this);
                      return newGridAccessor;
               }
-friend class GridAccessor<floatT>;
+       friend class GridAccessor<floatT>;
 };
 
 
@@ -84,10 +86,10 @@ class FileWriter{
        private:
               int _NEvents;
               int _NNucleonsCore;
-              GridAccessor<floatT> _gridAcc;
+              GridAccessor<floatT> & _gridAcc;
        public:
               // constructor
-              FileWriter(GridAccessor<floatT> newGridAcc, int newNEvents, int newNNucleonsCore) : _gridAcc(newGridAcc) {
+              FileWriter(GridAccessor<floatT> & newGridAcc, int newNEvents, int newNNucleonsCore) : _gridAcc(newGridAcc) {
                      _NEvents = newNEvents;
                      _NNucleonsCore = newNNucleonsCore;
               }
@@ -98,7 +100,7 @@ class FileWriter{
 
                      if(!file.is_open()){return;}
 
-                     std::vector<double> row;
+                     std::vector<floatT> row;
 
                      // loop through the data file which format is clarifight by
                      // x corrd \t y coord \t z coord \t NColl
@@ -118,6 +120,35 @@ class FileWriter{
               }
 };
 
+
+void indexerTest(int max){
+       Grid<PREC> grid(max);
+
+       std::cout << "xyz" << '\n';
+
+       //loop over all sites
+       for (size_t z = 0; z <= max; z++) {
+              for (size_t y = 0; y <= max; y++) {
+                     for (size_t x = 0; x <= max; x++) {
+                            Site si(x,y,z);
+                            grid.getAccsessor().setSite(si, grid.getAccsessor().getIndex(si));
+                     }
+              }
+       }
+       
+       //loop over all sites
+       for (size_t z = 0; z <= max; z++) {
+              for (size_t y = 0; y <= max; y++) {
+                     for (size_t x = 0; x <= max; x++) {
+                            Site si(x,y,z);
+                            std::cout << x << y << z << "\t" << grid.getAccsessor().getIndex(si)
+                                   - grid.getAccsessor().getSite(si) << '\n';
+
+                     }
+              }
+       }
+}
+
 int main(int argc, char const *argv[]) {
        //number of events
        int NEvents;
@@ -131,9 +162,11 @@ int main(int argc, char const *argv[]) {
        std::cout << "Number of nucleons per core: \n";
        std::cin >> NNucleonsCore;
 
-       int elems = 2* NEvents * NNucleonsCore;
+       int elems = 3;
 
-       Grid<PREC> grid(elems);
+       // Grid<PREC> grid(elems);
+
+       indexerTest(elems);
 
        return 0;
 }
