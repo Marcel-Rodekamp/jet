@@ -44,7 +44,10 @@ class GridAccessor{
                      return _grid._VData.at(getIndex(site));
               }
 
-              ~GridAccessor();
+              int getMaxSitesPerDirection(){
+                     return _grid._maxSitesPerDirection;
+              }
+
 };
 
 // class to store the data
@@ -56,29 +59,21 @@ class Grid{
 
               // number of sites in the 3 spartial directions (only cubic grids are allowed)
               int _maxSitesPerDirection;
-              int _elems;
        public:
               //constructor
-              Grid(int elems, int maxSitesPerDirection) : _VData(elems){
+              Grid(int maxSitesPerDirection) : _VData(
+                                     3*maxSitesPerDirection
+                                   + 3*maxSitesPerDirection*maxSitesPerDirection
+                                   + maxSitesPerDirection * maxSitesPerDirection * maxSitesPerDirection
+                                   + 1 ){
+
                      _maxSitesPerDirection = maxSitesPerDirection;
-                     _elems = elems;
-
-                     // allocate a temporaty vector with zero's
-                     std::vector<floatT> tmpVector(elems);
-
-                     _VData = tmpVector;
-              }
-
-              int getMaxSitesPerDirection(){
-                     return _maxSitesPerDirection;
               }
 
               GridAccessor<floatT> getAccsessor(){
                      GridAccessor<floatT> newGridAccessor(*this);
                      return newGridAccessor;
               }
-
-              ~Grid();
 
        friend class GridAccessor<floatT>;
 };
@@ -92,7 +87,8 @@ class FileWriter{
               GridAccessor<floatT> & _gridAcc;
        public:
               // constructor
-              FileWriter(GridAccessor<floatT> & newGridAcc, int newNEvents, int newNNucleonsCore) : _gridAcc(newGridAcc) {
+              FileWriter(GridAccessor<floatT> & newGridAcc, int newNEvents, int newNNucleonsCore)
+                                          : _gridAcc(newGridAcc) {
                      _NEvents = newNEvents;
                      _NNucleonsCore = newNNucleonsCore;
               }
@@ -111,9 +107,19 @@ class FileWriter{
                             for(int col = 0; col < 4 ; ++col){
                                    file >> row[col];
                             }
+                            int x = (row[0] + 15)*100;
+                            int y = (row[1] + 15)*100;
+                            int z = (row[2] + 15)*100;
+
+                            if(x > _gridAcc.getMaxSitesPerDirection() ||
+                                   y > _gridAcc.getMaxSitesPerDirection() ||
+                                   z > _gridAcc.getMaxSitesPerDirection()){
+                                          std::cout << "ERROR@readFile: Coordinates out of grid!" << '\n';
+                                   }
+
 
                             // compute the site
-                            Site site((row[0] + 15)*100, (row[1] + 15)*100, (row[2] + 15)*100);
+                            Site site(x, y, z);
 
                             // set NColl on the grid
                             _gridAcc.setSite(site, row[3]);
@@ -121,11 +127,35 @@ class FileWriter{
 
                      file.close();
               }
-              
-              ~FileWriter();
 };
 
+int main(int argc, char const *argv[]) {
+       //number of events
+       int NEvents;
 
+       std::cout << "Number of events: \n";
+       std::cin >> NEvents;
+
+       //number of nucleons in the core of the element, e.g. 208 for Pb
+       int NNucleonsCore;
+
+       std::cout << "Number of nucleons per core: \n";
+       std::cin >> NNucleonsCore;
+
+       int elems = 4;
+
+       Grid<PREC> grid(elems);
+
+       return 0;
+}
+
+
+
+
+/*
+// Testing routins
+
+// Test indexer:
 void indexerTest(int max){
        Grid<PREC> grid(max);
 
@@ -154,34 +184,5 @@ void indexerTest(int max){
        }
 }
 
-int main(int argc, char const *argv[]) {
-       //number of events
-       int NEvents;
-
-       std::cout << "Number of events: \n";
-       std::cin >> NEvents;
-
-       //number of nucleons in the core of the element, e.g. 208 for Pb
-       int NNucleonsCore;
-
-       std::cout << "Number of nucleons per core: \n";
-       std::cin >> NNucleonsCore;
-
-       int elems = 3;
-
-       // Grid<PREC> grid(elems);
-
-       indexerTest(elems);
-
-       return 0;
-}
-
-
-
-
-/*
-// Testing routins
-
-// Test indexer:
 
 */
