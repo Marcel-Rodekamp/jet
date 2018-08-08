@@ -118,10 +118,6 @@ class FileWriter{
               }
 };
 
-
-//int GridColumn = (int) ((EventData(Event*2*NNucleonsCore + RowData,0,pArray) + 15)*100);
-//int GridRow = (int) ((EventData(Event*2*NNucleonsCore + RowData,1,pArray) + 15)*100);
-
 int main(int argc, char const *argv[]) {
        //number of events
        int NEvents;
@@ -135,13 +131,9 @@ int main(int argc, char const *argv[]) {
        std::cout << "Number of nucleons per core: \n";
        std::cin >> NNucleonsCore;
 
-       int max = 3;
+       int elems = 2* NEvents * NNucleonsCore;
 
-       Grid<PREC> grid(max);
-       FileWriter<PREC> fileWriter(grid.getAccsessor(), NEvents, NNucleonsCore);
-
-       std::string fileName = "Pb67.6.txt";
-       fileWriter.readFile(fileName);
+       Grid<PREC> grid(elems);
 
        return 0;
 }
@@ -150,9 +142,9 @@ int main(int argc, char const *argv[]) {
 
 
 /*
-Testing routins
+// Testing routins
 
-Test indexer:
+// Test indexer:
 
 void indexerTest(int max){
        Grid<PREC> grid(max);
