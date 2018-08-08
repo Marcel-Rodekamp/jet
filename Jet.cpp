@@ -26,24 +26,22 @@ struct Site{
 template<class floatT>
 class GridAccessor{
        private:
-              Grid<floatT> * _grid;
+              Grid<floatT> & _grid;
        public:
-              GridAccessor(Grid<floatT> * newGrid){
-                     _grid = newGrid;
-              }
+              GridAccessor(Grid<floatT> & newGrid) : _grid(newGrid){}
 
               int getIndex(Site site){
-                     int max = _grid -> _maxSitesPerDirection;
+                     int max = _grid._maxSitesPerDirection;
                      return site.VCoordinates[0] + site.VCoordinates[1] + site.VCoordinates[2] + site.VCoordinates[1]*max
                                    + site.VCoordinates[2]*(2*max + max*max);
               }
 
               void setSite(Site site, floatT Ncoll){
-                     _grid -> _VData[getIndex(site)] = Ncoll;
+                     _grid._VData[getIndex(site)] = Ncoll;
               }
 
               floatT getSite(Site site){
-                     return _grid -> _VData.at(getIndex(site));
+                     return _grid._VData.at(getIndex(site));
               }
 
               int getMaxSitesPerDirection(){
@@ -62,24 +60,21 @@ class Grid{
               int _maxSitesPerDirection;
        public:
               //constructor
-              Grid(int maximalSites){
-                     _maxSitesPerDirection = maximalSites;
+              Grid(int maxSitesPerDirection) : _VData(
+                                     3*maxSitesPerDirection
+                                   + 3*maxSitesPerDirection*maxSitesPerDirection
+                                   + maxSitesPerDirection * maxSitesPerDirection * maxSitesPerDirection
+                                   + 1 ){
 
-                     // compute the number of elemes
-                     int elems = 3*maximalSites + 3 * maximalSites * maximalSites + maximalSites *
-                                   maximalSites * maximalSites + 1;
-
-                     // allocate a temporaty vector with zero's
-                     std::vector<floatT> tmpVector(elems);
-
-                     _VData = tmpVector;
+                     _maxSitesPerDirection = maxSitesPerDirection;
               }
 
               GridAccessor<floatT> getAccsessor(){
-                     GridAccessor<floatT> newGridAccessor(this);
+                     GridAccessor<floatT> newGridAccessor(*this);
                      return newGridAccessor;
               }
-friend class GridAccessor<floatT>;
+
+       friend class GridAccessor<floatT>;
 };
 
 
@@ -88,10 +83,11 @@ class FileWriter{
        private:
               int _NEvents;
               int _NNucleonsCore;
-              GridAccessor<floatT> _gridAcc;
+              GridAccessor<floatT> & _gridAcc;
        public:
               // constructor
-              FileWriter(GridAccessor<floatT> newGridAcc, int newNEvents, int newNNucleonsCore) : _gridAcc(newGridAcc) {
+              FileWriter(GridAccessor<floatT> & newGridAcc, int newNEvents, int newNNucleonsCore)
+                                          : _gridAcc(newGridAcc) {
                      _NEvents = newNEvents;
                      _NNucleonsCore = newNNucleonsCore;
               }
@@ -102,7 +98,7 @@ class FileWriter{
 
                      if(!file.is_open()){return;}
 
-                     std::vector<double> row;
+                     std::vector<floatT> row;
 
                      // loop through the data file which format is clarified by
                      // x corrd \t y coord \t z coord \t NColl
@@ -110,9 +106,19 @@ class FileWriter{
                             for(int col = 0; col < 4 ; ++col){
                                    file >> row[col];
                             }
+                            int x = (row[0] + 15)*100;
+                            int y = (row[1] + 15)*100;
+                            int z = (row[2] + 15)*100;
+
+                            if(x > _gridAcc.getMaxSitesPerDirection() ||
+                                   y > _gridAcc.getMaxSitesPerDirection() ||
+                                   z > _gridAcc.getMaxSitesPerDirection()){
+                                          std::cout << "ERROR@readFile: Coordinates out of grid!" << '\n';
+                                   }
+
 
                             // compute the site
-                            Site site((row[0] + 15)*100, (row[1] + 15)*100, (row[2] + 15)*100);
+                            Site site(x, y, z);
 
                             // set NColl on the grid
                             _gridAcc.setSite(site, row[3]);
@@ -180,14 +186,14 @@ int main(int argc, char const *argv[]) {
 
        std::cout << "Number of nucleons per core: \n";
        std::cin >> NNucleonsCore;
-
+  
        // nucleon nucleon cross section for nucleon radius
        PREC NNCross;
 
        std::cout << "Nucleon Nucleon cross section in mb: \n";
        std::cin >> NNCross;
 
-       int elems = 2* NEvents * NNucleonsCore;
+       int elems = 4;
 
        Grid<PREC> grid(elems);
 
@@ -201,11 +207,12 @@ int main(int argc, char const *argv[]) {
 // Testing routins
 
 // Test indexer:
-
 void indexerTest(int max){
        Grid<PREC> grid(max);
 
        std::cout << "xyz" << '\n';
+
+       //loop over all sites
        for (size_t z = 0; z <= max; z++) {
               for (size_t y = 0; y <= max; y++) {
                      for (size_t x = 0; x <= max; x++) {
@@ -214,6 +221,8 @@ void indexerTest(int max){
                      }
               }
        }
+
+       //loop over all sites
        for (size_t z = 0; z <= max; z++) {
               for (size_t y = 0; y <= max; y++) {
                      for (size_t x = 0; x <= max; x++) {
@@ -225,4 +234,6 @@ void indexerTest(int max){
               }
        }
 }
+
+
 */
