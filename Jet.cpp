@@ -12,6 +12,8 @@ struct Site;
 template<class floatT> class GridAccessor;
 template<class floatT> class Grid;
 
+void indexerTest(int max);
+
 // structure to define the lattice points leaving out the z component due to the contemplated event plane
 struct Site{
        std::vector<int> VCoordinates;
@@ -24,33 +26,7 @@ struct Site{
 
 };
 
-// class to accsess the data
-template<class floatT>
-class GridAccessor{
-       private:
-              Grid<floatT> & _grid;
-       public:
-              GridAccessor(Grid<floatT> & newGrid) : _grid(newGrid){}
-
-              int getIndex(Site site){
-                     int max = _grid._maxSitesPerDirection;
-                     return site.VCoordinates[0] + site.VCoordinates[1] + site.VCoordinates[1]*max;
-              }
-
-              void setSite(Site site, floatT Ncoll){
-                     _grid._VData[getIndex(site)] = Ncoll;
-              }
-
-              floatT getSite(Site site){
-                     return _grid._VData.at(getIndex(site));
-              }
-
-              int getMaxSitesPerDirection(){
-                     return _grid._maxSitesPerDirection;
-              }
-};
-
-// class to store the data
+// class to store data
 template<class floatT>
 class Grid{
        private:
@@ -67,12 +43,26 @@ class Grid{
                                           + 1 ) ,
                                    _maxSitesPerDirection(maxSitesPerDirection) {}
 
-              GridAccessor<floatT> getAccsessor(){
-                     GridAccessor<floatT> newGridAccessor(*this);
-                     return newGridAccessor;
+              int getIndex(Site site){
+                     int max = _maxSitesPerDirection;
+                     return site.VCoordinates[0] + site.VCoordinates[1] + site.VCoordinates[1]*max;
               }
 
-       friend class GridAccessor<floatT>;
+              void setSite(Site site, floatT value){
+                     _VData.at(getIndex(site)) = value;
+              }
+
+              floatT getSite(Site site){
+                     return _VData.at(getIndex(site));
+              }
+
+              void addSite(Site site, floatT value){
+                     _VData.at(getIndex(site)) += value;
+              }
+
+              int getMaxSitesPerDirection(){
+                     return _maxSitesPerDirection;
+              }
 };
 
 
@@ -88,7 +78,7 @@ class FileWriter{
                                                         _NNucleonsCore(newNNucleonsCore),
                                                         _filename(newFilename) {}
 
-              void readFile(GridAccessor<floatT> gridAcc){
+              void readFile(Grid<floatT> & grid){
                      std::fstream file;
                      file.open(_filename.c_str(), std::ios::in);
 
@@ -107,8 +97,8 @@ class FileWriter{
                             int x = (row[0] + 15)*100;
                             int y = (row[1] + 15)*100;
 
-                            if(x > gridAcc.getMaxSitesPerDirection() ||
-                               y > gridAcc.getMaxSitesPerDirection()  ) {
+                            if(x > grid.getMaxSitesPerDirection() ||
+                               y > grid.getMaxSitesPerDirection()  ) {
                                           std::cout << "ERROR@readFile: Coordinates out of grid!" << '\n';
                             }
 
@@ -116,13 +106,13 @@ class FileWriter{
                             Site site(x, y);
 
                             // set NColl on the grid
-                            gridAcc.setSite(site, row[3]);
+                            grid.setSite(site, row[3]);
                      }
 
                      file.close();
               }
 
-              void writeFileEDens(GridAccessor<floatT> gridAcc, int accuracy = 10){
+              void writeFileEDens(Grid<floatT> * grid, int accuracy = 10){
                      std::fstream file;
                      std::string newFilename;
                      newFilename.append("smearedEnergyDensity_");
@@ -131,11 +121,12 @@ class FileWriter{
 
                      if(!file.is_open()){return;}
 
-                     for(int x = 0; x < gridAcc.getMaxSitesPerDirection(); x += accuracy){
-                            for(int y = 0; y < gridAcc.getMaxSitesPerDirection(); y += accuracy){
+                     for(int x = 0; x < grid -> getMaxSitesPerDirection(); x += accuracy){
+                            for(int y = 0; y < grid -> getMaxSitesPerDirection(); y += accuracy){
 
                             Site site(x,y);
-                            file << x << "\t" << y << "\t" << gridAcc.getSite(site) << std::endl;
+                            file << ((double) x / 100.0) - 15.0 << "\t" << ((double) y / 100.0) - 15.0
+                            << "\t" << grid -> getSite(site) << std::endl;
 
 
                             }
@@ -165,38 +156,36 @@ class EnergyDensity{
 
               // calculate energy density in MeV from NColl
               // (15.0 -> C. Schmidt, 800.0 -> Dinner N. Borghini & ???)
-              void energyDensity(GridAccessor<floatT> gridAcc){
+              void energyDensity(Grid<floatT> & grid){
 
                      floatT EDens = 0;
 
-                     for (int y = 0; y < _grid.getAccsessor().getMaxSitesPerDirection(); y++) {
-                            for (int x = 0; x < _grid.getAccsessor().getMaxSitesPerDirection(); x++) {
+                     for (int y = 0; y < _grid.getMaxSitesPerDirection(); y++) {
+                            for (int x = 0; x < _grid.getMaxSitesPerDirection(); x++) {
                                    Site site(x,y);
-                                   int NColl = (int) gridAcc.getSite(site);
+                                   int NColl = (int) grid.getSite(site);
 
                                    // 15 * 800 * NColl^4 / 46^4
               	              EDens = 0.002680093338717343 * NColl * NColl * NColl * NColl;
 
-                                   _grid.getAccsessor().setSite(site,EDens);
+                                   _grid.setSite(site,EDens);
                             }
                      }
               }
 
-              GridAccessor<floatT> const getSmearedEnergyDensData(){
-                     return _gridSmeared.getAccsessor();
+              Grid<floatT> * getSmearedEnergyDensData(){
+                     return & _gridSmeared;
               }
 
               void smearedEnergyDensity(){
-                     for (int y = 0; y < _grid.getAccsessor().getMaxSitesPerDirection(); y++) {
-                            for (int x = 0; x < _grid.getAccsessor().getMaxSitesPerDirection(); x++) {
+                     for (int y = 0; y < _grid.getMaxSitesPerDirection(); y++) {
+                            for (int x = 0; x < _grid.getMaxSitesPerDirection(); x++) {
                                    Site site(x, y);
-                                   if (_grid.getAccsessor().getSite(site) != 0 ) {
-                                          for (int ynew = 0; ynew < _gridSmeared.getAccsessor().getMaxSitesPerDirection(); ynew++) {
-                                                 for (int xnew = 0; xnew < _gridSmeared.getAccsessor().getMaxSitesPerDirection(); xnew++) {
-                                                        if (_RadNucleon > std::hypot((x - xnew),(y - ynew))) {
+                                   if (_grid.getSite(site) != 0 ) {
+                                          for (int ynew = y - (int) _RadNucleon; ynew <= y + (int) _RadNucleon; ynew++) {
+                                                 for (int xnew = x - (int) _RadNucleon; xnew <= x + (int) _RadNucleon; xnew++) {
                                                                Site siteNew(xnew,ynew);
-                                                               _gridSmeared.getAccsessor().setSite(siteNew,_grid.getAccsessor().getSite(site));
-                                                        }
+                                                               _gridSmeared.addSite(siteNew,_grid.getSite(site));
                                                  }
                                           }
                                    }
@@ -241,7 +230,7 @@ int main(int argc, char const *argv[]) {
 
        std::cout << "Initializing the energy density computation" << '\n';
 
-       EnergyDensity<PREC> energDens(NNCross, rawDataGrid.getAccsessor().getMaxSitesPerDirection());
+       EnergyDensity<PREC> energDens(NNCross, rawDataGrid.getMaxSitesPerDirection());
 
        std::cout << "Read data " << '\n';
 
@@ -249,11 +238,11 @@ int main(int argc, char const *argv[]) {
 
        FileWriter<PREC> file(NEvents,NNucleonsCore, filename);
 
-       file.readFile(rawDataGrid.getAccsessor());
+       file.readFile(rawDataGrid);
 
        std::cout << "Compute energy density" << '\n';
 
-       energDens.energyDensity(rawDataGrid.getAccsessor());
+       energDens.energyDensity(rawDataGrid);
 
        std::cout << "Smear energy density" << '\n';
 
@@ -271,7 +260,7 @@ int main(int argc, char const *argv[]) {
 
 
 
-/*
+
 // Testing routins
 
 // Test indexer:
@@ -281,27 +270,22 @@ void indexerTest(int max){
        std::cout << "xyz" << '\n';
 
        //loop over all sites
-       for (size_t z = 0; z <= max; z++) {
-              for (size_t y = 0; y <= max; y++) {
-                     for (size_t x = 0; x <= max; x++) {
-                            Site si(x,y,z);
-                            grid.getAccsessor().setSite(si, grid.getAccsessor().getIndex(si));
-                     }
+       for (size_t y = 0; y <= max; y++) {
+              for (size_t x = 0; x <= max; x++) {
+                     Site si(x,y);
+                     grid.setSite(si, grid.getIndex(si));
               }
        }
+
 
        //loop over all sites
-       for (size_t z = 0; z <= max; z++) {
-              for (size_t y = 0; y <= max; y++) {
-                     for (size_t x = 0; x <= max; x++) {
-                            Site si(x,y,z);
-                            std::cout << x << y << z << "\t" << grid.getAccsessor().getIndex(si)
-                                   - grid.getAccsessor().getSite(si) << '\n';
+       for (size_t y = 0; y <= max; y++) {
+              for (size_t x = 0; x <= max; x++) {
+                     Site si(x,y);
+                     std::cout << x << y << "\t" << grid.getIndex(si)
+                            - grid.getSite(si) << '\n';
 
-                     }
               }
        }
+
 }
-
-
-*/
