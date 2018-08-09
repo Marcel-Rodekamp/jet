@@ -9,20 +9,54 @@
 #define PREC double
 
 struct Site;
-template<class floatT> class GridAccessor;
 template<class floatT> class Grid;
 
 void indexerTest(int max);
+void runThroughGridTest(int max);
 
 // structure to define the lattice points leaving out the z component due to the contemplated event plane
-struct Site{
-       std::vector<int> VCoordinates;
+class Site{
+       private:
+              std::vector<int> VCoordinates;
 
-       // constructor
-       Site(int x, int y){
-              VCoordinates.push_back(x);
-              VCoordinates.push_back(y);
-       }
+       public:
+              // constructor
+              Site(int x, int y){
+                     VCoordinates.push_back(x);
+                     VCoordinates.push_back(y);
+              }
+
+              int inline x(){
+                     return VCoordinates.at(0);
+              }
+
+              int inline y(){
+                     return VCoordinates.at(1);
+              }
+
+              void inline xUp(){
+                     VCoordinates.at(0) += 1;
+              }
+
+              void inline yUp(){
+                     VCoordinates.at(1) += 1;
+              }
+
+              void inline xDown(){
+                     VCoordinates.at(0) -= 1;
+              }
+
+              void inline yDown(){
+                     VCoordinates.at(1) -= 1;
+              }
+
+              void inline setX(int newX){
+                     VCoordinates.at(0) = newX;
+              }
+
+              void inline setY(int newY){
+                     VCoordinates.at(1) = newY;
+              }
 
 };
 
@@ -43,26 +77,50 @@ class Grid{
                                           + 1 ) ,
                                    _maxSitesPerDirection(maxSitesPerDirection) {}
 
-              int getIndex(Site site){
-                     int max = _maxSitesPerDirection;
-                     return site.VCoordinates[0] + site.VCoordinates[1] + site.VCoordinates[1]*max;
+              int inline getIndex(Site site){
+                     return site.x() + site.y() + site.y() * _maxSitesPerDirection;
               }
 
-              void setSite(Site site, floatT value){
+              void inline setSite(Site site, floatT value){
                      _VData.at(getIndex(site)) = value;
               }
 
-              floatT getSite(Site site){
+              floatT inline getSite(Site site){
                      return _VData.at(getIndex(site));
               }
 
-              void addSite(Site site, floatT value){
+              void inline addSite(Site site, floatT value){
                      _VData.at(getIndex(site)) += value;
               }
 
-              int getMaxSitesPerDirection(){
+              int inline getMaxSitesPerDirection(){
                      return _maxSitesPerDirection;
               }
+
+              // run through the whole grid
+              bool runThroughGrid(Site & site){
+                     // compute the next site
+                     int newCoordX = site.x() + 1;
+
+                     if(newCoordX <= _maxSitesPerDirection){
+                            site.xUp();
+                     }
+                     else{
+
+                            int newCoordY = site.y() + 1;
+
+                            if(newCoordY > _maxSitesPerDirection){
+                                   return false;
+                            }
+                            else{
+                                   site.yUp();
+                                   site.setX(0);
+                            }
+                     }
+
+                     return true;
+              }
+
 };
 
 
@@ -152,8 +210,6 @@ class EnergyDensity{
                                                          // from cross section to radius in fm.
                                                          // the factor 100 is necessary due to the grid size
 
-
-
               // calculate energy density in MeV from NColl
               // (15.0 -> C. Schmidt, 800.0 -> Dinner N. Borghini & ???)
               void energyDensity(Grid<floatT> & grid){
@@ -173,54 +229,50 @@ class EnergyDensity{
                      }
               }
 
-              Grid<floatT> * getSmearedEnergyDensData(){
-                     return & _gridSmeared;
-              }
-
               void smearedEnergyDensity(){
-                     for (int y = 0; y < _grid.getMaxSitesPerDirection(); y++) {
-                            for (int x = 0; x < _grid.getMaxSitesPerDirection(); x++) {
-                                   Site site(x, y);
-                                   if (_grid.getSite(site) != 0 ) {
-                                          for (int ynew = y - (int) _RadNucleon; ynew <= y + (int) _RadNucleon; ynew++) {
-                                                 for (int xnew = x - (int) _RadNucleon; xnew <= x + (int) _RadNucleon; xnew++) {
-                                                               Site siteNew(xnew,ynew);
-                                                               _gridSmeared.addSite(siteNew,_grid.getSite(site));
-                                                 }
+                     Site site(0, 0);
+                     Site tmpSite(0,0);
+                     const int tmpRadNucleon = (int) _RadNucleon;
+
+                     while(_grid.runThroughGrid(site)){
+                            if (_grid.getSite(site) != 0 ) {
+                                   for(int x = site.x() - tmpRadNucleon; x < site.x() + tmpRadNucleon; x++){
+                                          for(int y = site.y() - tmpRadNucleon; y < site.y() + tmpRadNucleon; y++){
+                                                 tmpSite.setX(x);
+                                                 tmpSite.setY(y);
+                                                 _gridSmeared.addSite(tmpSite,_grid.getSite(site));
                                           }
                                    }
                             }
                      }
               }
+
+              Grid<floatT> * getSmearedEnergyDensData(){
+                     return & _gridSmeared;
+              }
 };
 
-
-int main(int argc, char const *argv[]) {
-       std::clock_t start;
-       double duration;
-
+void compute(){
        // number of events
-       int NEvents;
+       int NEvents = 1;
 
-       std::cout << "Number of events: \n";
+       // std::cout << "Number of events: \n";
 
-       std::cin >> NEvents;
+       // std::cin >> NEvents;
 
        // number of nucleons in the core of the element, e.g. 208 for Pb
-       int NNucleonsCore;
+       int NNucleonsCore = 208;
 
-       std::cout << "Number of nucleons per core: \n";
+       // std::cout << "Number of nucleons per core: \n";
 
-       std::cin >> NNucleonsCore;
+       // std::cin >> NNucleonsCore;
 
        // nucleon nucleon cross section for nucleon radius
-       PREC NNCross;
+       PREC NNCross = 67.6;
 
-       std::cout << "Nucleon Nucleon cross section in mb: \n";
+       // std::cout << "Nucleon Nucleon cross section in mb: \n";
 
-       std::cin >> NNCross;
-
-       start = std::clock();
+       // std::cin >> NNCross;
 
        int elems = 3001;
 
@@ -249,10 +301,19 @@ int main(int argc, char const *argv[]) {
        energDens.smearedEnergyDensity();
 
        file.writeFileEDens(energDens.getSmearedEnergyDensData());
+}
 
-       duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+int main(int argc, char const *argv[]) {
+       std::clock_t start;
 
-       std::cout<< duration <<'\n';
+       start = std::clock();
+
+
+       // runThroughGridTest(3);
+
+       compute();
+
+       std::cout << ( std::clock() - start ) / (double) CLOCKS_PER_SEC << "s" << '\n';
 
        return 0;
 }
@@ -288,4 +349,28 @@ void indexerTest(int max){
               }
        }
 
+}
+
+//Test runThroughGrid()
+
+void runThroughGridTest(int max){
+       Grid<PREC> grid(max);
+
+       std::cout << "runThroughGrid(Site)" << '\n';
+
+       Site site(0,0);
+       int vectorIndex = 0;
+       std::cout << "now at (x,y): (" << site.x() << "," << site.y() << ")" << '\n';
+       while(grid.runThroughGrid(site)){
+              std::cout << "now at (x,y): (" << site.x() << "," << site.y() << ")" << '\n';
+       }
+
+       std::cout << "\nloop through lattice\n" << '\n';
+
+       for (size_t y = 0; y <= max; y++) {
+              for (size_t x = 0; x <= max; x++){
+                     Site si(x,y);
+                     std::cout << "now at (x,y): (" << si.x() << "," << si.y() << ")" << '\n';
+              }
+       }
 }
