@@ -141,11 +141,8 @@ class FileWriter{
                   const std::string _fileName;
                   std::ofstream _fileStream;
 
-
                   //! initializes class, automatically called by constructors
                   void init() {
-
-
                          _fileStream.open(_fileName.c_str());
 
                           if(!_fileStream.is_open()){
@@ -258,6 +255,7 @@ class EnergyDensity{
 
 };
 
+//TODO _realX usw in eine Site verwandeln
 template<class floatT>
 class IntegratedEnergyDensity{
        private:
@@ -270,13 +268,21 @@ class IntegratedEnergyDensity{
               // angle steps for radial integration
               floatT _AngleStep;
 
+<<<<<<< HEAD
+=======
+              Grid<floatT> & _smearEnerDensGrid;
+
+>>>>>>> Marcel
               // vectors for the calculated angle and integrated energy density
               std::vector<floatT> _AngleSec1;
               std::vector<floatT> _EDensSec1;
+
               std::vector<floatT> _AngleSec2;
               std::vector<floatT> _EDensSec2;
+
               std::vector<floatT> _AngleSec3;
               std::vector<floatT> _EDensSec3;
+
               std::vector<floatT> _AngleSec4;
               std::vector<floatT> _EDensSec4;
 
@@ -295,6 +301,7 @@ class IntegratedEnergyDensity{
               std::vector<floatT> _RadiusFour;
               std::vector<floatT> _EDensFour;
 
+<<<<<<< HEAD
               std::vector<floatT> _Angle;
               std::vector<floatT> _Integral;
 
@@ -347,84 +354,122 @@ class IntegratedEnergyDensity{
                                                  + fP12 * x2x * yy1 + fP22 * xx1 * yy1);
               }
 
+=======
+>>>>>>> Marcel
               // calculation for the right sector (sector 1) from 7/4 pi to 1/4 pi
-              void sector1() {
+              void _sector1() {
                      // PhiOne is the angle with respect to the origin in real space
                      floatT PhiOne = 0.0;
+
                      // alpha is the angle seen from the start point of the integration
-                     floatT Alpha1 = -PI / 4.0;
-                     for(int i = 0; i < Steps; i++) {
+                     floatT angleAlpha = -PI / 4.0;
+
+                     // interpolation coord
+                     floatT interCoordx_1, interCoordy_1;
+                     floatT interCoordx_2, interCoordy_2;
+                     floatT interCoordy;
+
+                     floatT distFromJetStart;
+
+                     floatT Integral;
+
+                     for(int step = 0; step < Steps; step++) {
+                            // set integral to 0 for += notation
+                            Integral = 0.0;
+
                             // calculate the slope from alpha
-                     	floatT m = std::tan(Alpha1);
-                     	floatT x1, x2, y, y1, y2;
+                     	floatT slope = std::tan(angleAlpha);
+
                             // point-slope form of equation for straight line y = m(x-x1)+y1
                             // calculate for each x value of the grid a value for y
-                     	for(int x = _JetStartX; x <= 3000; x++) {
-                     		y = m * ((floatT) x - (floatT) _JetStartX) + (floatT) _JetStartY;
+                     	for(int interCoordx = _JetStartX;
+                                    interCoordx < _smearEnerDensGrid.getMaxSitesPerDirection();
+                                    interCoordx++) {
+
+                                   interCoordy = slope * (interCoordx - _JetStartX) +  _JetStartY;
+
                                    // check wheather the point lies on the grid or not (needed for
                                    // integration which does not start at the origin (real (0.0,0.0))
-                     		if(y <= 3000.0 && y >= 0.0) {
+
+                     		if(y < _smearEnerDensGrid.getMaxSitesPerDirection() && y >= 0.0) {
                                           // find the four gridpoints {(x1,y1),(x2,y1),(x1,y2),(x2,y2)}
                                           // for the interpolation around a point (x,y)
-                     			x1 = std::floor((floatT) x);
-                     			x2 = std::floor((floatT) x + 1.0);
-                     			y1 = std::floor(y);
-                     			y2 = std::floor(y + 1.0);
-                                          // define the points where the energy density grid is read out
-                     			Site siteP1((int) x1, (int) y1);
-                                          Site siteP2((int) x1, (int) y2);
-                                          Site siteP3((int) x2, (int) y1);
-                                          Site siteP4((int) x2, (int) y2);
+                     			interCoordx_1 = std::floor((floatT) interCoordx);
+                     			interCoordx_2 = std::floor((floatT) interCoordx + 1.0);
+                     			interCoordy_1 = std::floor(interCoordy);
+                     			interCoordy_2 = std::floor(interCoordy + 1.0);
 
+                                          // define the points where the energy density grid is read out
+                     			Site siteP1((int) interCoordx_1, (int) interCoordy_1);
+                                          Site siteP2((int) interCoordx_1, (int) interCoordy_2);
+                                          Site siteP3((int) interCoordx_2, (int) interCoordy_1);
+                                          Site siteP4((int) interCoordx_2, (int) interCoordy_2);
+
+                     			floatT Interpol = energyDensityInterpolation(interCoordx_1,
+                                                                                       interCoordx_2,
+                                                                                       (floatT) interCoordx,
+                                                                                       interCoordy_1,
+                                                                                       interCoordy_2,
+                                                                                       interCoordy);
+
+<<<<<<< HEAD
                      			floatT Interpol = energyDensityInterpolation(
                                                  _energDens.getSmearedEnergyDensData() -> getSite(siteP1),
                                                  _energDens.getSmearedEnergyDensData() -> getSite(siteP2),
                                                  _energDens.getSmearedEnergyDensData() -> getSite(siteP3),
                                                  _energDens.getSmearedEnergyDensData() -> getSite(siteP4),
                                                  x1, x2, (floatT) x, y1, y2, y);
+=======
+>>>>>>> Marcel
                                           // calculate the distance from the jet origin
-                     			floatT r = std::hypot((((floatT) x - (floatT) _JetStartX) / 100.0),
-                                                        ((y - (floatT) _JetStartY) / 100.0));
+                     			distFromJetStart = std::hypot(
+                                                 (((floatT) interCoordx - (floatT) _JetStartX) / 100.0),
+                                                 ((interCoordy - (floatT) _JetStartY) / 100.0));
+
                                           // store point at line and the interpolated value at that point
-                     			_RadiusOne.at(x - _JetStartX) = r;
-                     			_EDensOne.at(x - _JetStartX) = Interpol;
+                     			_RadiusOne.at(interCoordx - _JetStartX) = distFromJetStart;
+                     			_EDensOne.at(interCoordx - _JetStartX) = Interpol;
 
                      		}
                      		else {
                                           // calculate the distance from the jet origin
-                     			floatT r = std::hypot((((floatT) x - (floatT) _JetStartX) / 100.0),
-                                                 ((y - (floatT) _JetStartY) / 100.0));
-                                          // store point at line and the interpolated value at that point
-                                          _RadiusOne.at(x - _JetStartX) = r;
-                     			_EDensOne.at(x - _JetStartX) = 0.0;
-                     		}
+                     			distFromJetStart = std::hypot(
+                                                 (((floatT) interCoordx - (floatT) _JetStartX) / 100.0),
+                                                 ((interCoordy - (floatT) _JetStartY) / 100.0));
 
+                                          // store point at line and the interpolated value at that point
+                     			_RadiusOne.at(interCoordx - _JetStartX) = distFromJetStart;
+                     			_EDensOne.at(interCoordx - _JetStartX) = 0.;
+                     		}
                      	}
+
                             // perform a trapezoidal integration along the line
-                     	floatT Integral = 0.0;
-                     	for(int j = 0; j <= 3000 - _JetStartX; j++)
-                     	{
-                     		Integral += 0.5*(_RadiusOne.at(j+1) - _RadiusOne.at(j))
-                                          * (_EDensOne.at(j) + _EDensOne.at(j+1));
+                     	for(int inteStep = 0;
+                                   inteStep <= _smearEnerDensGrid.getMaxSitesPerDirection() - _JetStartX;
+                                   inteStep++){
+
+                                   Integral += 0.5 * (_RadiusOne.at(inteStep+1) - _RadiusOne.at(inteStep))
+                                                   * (_EDensOne.at(inteStep) + _EDensOne.at(inteStep+1));
                      	}
 
                      // calculate the angle from the center of mass (real (0.0,0.0))
-                     y = m * (3000.0 - (floatT) _JetStartX) + (floatT) _JetStartY;
-                     PhiOne = std::atan((y - 1500.0) / (1500.0));
-                     if(PhiOne < 0.0) PhiOne += 2.0 * PI;
+                     interCoordy = slope
+                            * (_smearEnerDensGrid.getMaxSitesPerDirection() - _JetStartX - 1) + _JetStartY;
+
+                     PhiOne = std::abs(std::atan(
+                            (interCoordy - ((floatT) _smearEnerDensGrid.getMaxSitesPerDirection() - 1.)/2.)
+                                   /(((floatT) _smearEnerDensGrid.getMaxSitesPerDirection() - 1.)/2.)));
 
                      // store the values for the angle and the integral vectors
-                     _AngleSec1.at(i) = PhiOne;
-                     _EDensSec1.at(i) = Integral;
+                     _AngleSec1.at(step) = PhiOne;
+                     _EDensSec1.at(step) = Integral;
 
-                     // Calculation of ECCENTRICITY
-
-                     Alpha1 += _AngleStep;
+                     angleAlpha += _AngleStep;
                      }
               }
 
               // calculation for the left sector (sector 2) from 3/4 pi to 5/4 pi
-              void sector2() {
+              void _sector2() {
                      // PhiTwo is the angle with respect to the origin in real space
                      floatT PhiTwo = 0.0;
                      // alpha is the angle seen from the start point of the integration
@@ -499,7 +544,7 @@ class IntegratedEnergyDensity{
               }
 
               // calculation for the upper sector (sector3) from 1/4 pi to 3/4 pi
-              void sector3() {
+              void _sector3() {
                      // the roles of x and y must be changed because the slope/tan diverges at pi/2
                      // PhiThree is the angle with respect to the origin in real space
                      floatT PhiThree = 0.0;
@@ -575,7 +620,7 @@ class IntegratedEnergyDensity{
               }
 
               // calculation for the lower sector from 5/4 pi to 7/4 pi
-              void sector4() {
+              void _sector4() {
                      // the roles of x and y must be changed because the slope/tan diverges at pi/2
                      // PhiThree is the angle with respect to the origin in real space
                      floatT PhiFour = 0.0;
@@ -654,7 +699,56 @@ class IntegratedEnergyDensity{
                      }
               }
 
-              floatT inline integralNormalization() {
+       public:
+              // constructor
+              IntegratedEnergyDensity(Site startSite, EnergyDensity<floatT> & newEnergDens):
+                                                        _RealX(startSite.x()),
+                                                        _RealY(startSite.y()),
+                                                        _JetStartX((int) ((startSite.x() + 15. ) * 100.) ),
+                                                        _JetStartY((int) ((startSite.y() + 15. ) * 100.) ),
+                                                        _AngleStep((PI / 2.0) / (Steps)),
+                                                        _energDens(newEnergDens),
+                                                        _AngleSec1(Steps),
+                                                        _EDensSec1(Steps),
+                                                        _AngleSec2(Steps),
+                                                        _EDensSec2(Steps),
+                                                        _AngleSec3(Steps),
+                                                        _EDensSec3(Steps),
+                                                        _AngleSec3(Steps),
+                                                        _EDensSec3(Steps),
+                                                        _AverageEDens1(Steps),
+                                                        _AverageEDens2(Steps),
+                                                        _AverageEDens3(Steps),
+                                                        _AverageEDens4(Steps),
+                                                        _RadiusOne(3000 - (int) ((startSite.x() + 15. ) * 100.)),
+                                                        _EDensOne(3000 - (int) ((startSite.x() + 15. ) * 100.)),
+                                                        _RadiusTwo((int) ((startSite.x() + 15. ) * 100.)),
+                                                        _EDensTwo((int) ((startSite.x() + 15. ) * 100.)),
+                                                        _RadiusThree(3000 - (int) ((startSite.y() + 15. ) * 100.)),
+                                                        _EDensThree(3000 - (int) ((startSite.y() + 15. ) * 100.)),
+                                                        _RadiusFour((int) ((startSite.y() + 15. ) * 100.)),
+                                                        _EDensFour((int) ((startSite.y() + 15. ) * 100.)) {}
+
+
+              // bilinear interpolation function between the grid points in the energy density grid
+              floatT energyDensityInterpolation(
+                                   floatT fP11,
+                                   floatT fP12,
+                                   floatT fP21,
+                                   floatT fP22,
+                                          floatT x1, floatT x2, floatT x, floatT y1, floatT y2, floatT y){
+              	floatT x2x, x2x1, xx1, y2y, y2y1, yy1, interpolationValue;
+              	x2x = x2 - x;
+              	x2x1 = x2 - x1;
+              	xx1 = x - x1;
+              	y2y = y2 - y;
+              	y2y1 = y2 - y1;
+              	yy1 = y - y1;
+              	return interpolationValue = (1.0 / (x2x1 * y2y1)) * (fP11 * x2x * y2y + fP21 * xx1 * y2y
+                                                 + fP12 * x2x * yy1 + fP22 * xx1 * yy1);
+              }
+
+                            floatT inline integralNormalization() {
                      // normalization of the integral by summing the value of the integrals
                      // for all angles phi of one event
                      floatT IntegralNormalization = 0.0;
@@ -835,6 +929,61 @@ class FlowCoefficients{
 
               IntegratedEnergyDensity<floatT> & _intEnergDens;
 
+              // merged vectors
+              void _mergeVectors() {
+                     for(int i = 0; i < Steps; i++) {
+                            _MergedAngles.at(i) = _intEnergDens._AngleSec1.at(i);
+                            _MergedAngles.at(Steps + i) = _intEnergDens._AngleSec2.at(i);
+                            _MergedAngles.at(2 * Steps + i) = _intEnergDens._AngleSec3.at(i);
+                            _MergedAngles.at(3 * Steps + i) = _intEnergDens._AngleSec4.at(i);
+
+                            _MergedIntegrals.at(i) = _intEnergDens._EDensSec1.at(i);
+                            _MergedIntegrals.at(Steps + i) = _intEnergDens._EDensSec2.at(i);
+                            _MergedIntegrals.at(2 * Steps + i) = _intEnergDens._EDensSec3.at(i);
+                            _MergedIntegrals.at(3 * Steps + i) = _intEnergDens._EDensSec4.at(i);
+                     }
+              }
+
+              //calculation of the flow coefficients
+              void _flowCoefficients() {
+                     // Compute an Fourier series
+                     floatT norm0 = 0.0;
+                     for(int i=0; i < 4 * Steps - 1; i++) {
+                            a0 += (((_MergedIntegrals.at(i) + _MergedIntegrals.at(i + 1)) / 2.0)
+                                   * _intEnergDens._AngleStep) / PI;
+                     }
+
+                     floatT aFourier = 0.0;
+                     for(int aCount=1; aCount <= 3; aCount++) {
+                            aFourier = 0.0;
+                            for(int i=0; i < 4 * Steps - 1; i++) {
+                                   aFourier += ((((_MergedIntegrals.at(i) + _MergedIntegrals.at(i + 1)) / 2.0)
+                                                 * std::cos((floatT) aCount
+                                                               * ((_MergedAngles.at(i)
+                                                               + _MergedAngles.at(i + 1)) / 2.0)))
+                                                 * _intEnergDens._AngleStep) / PI;
+                            }
+                            _Fourier.at(aCount - 1) = aFourier / (a0 / 2.0);
+                            aFourier = 0.0;
+                     }
+
+                     floatT bFourier = 0.0;
+                     for(int bCount=1; bCount <= 3; bCount++) {
+                            bFourier = 0.0;
+                            for(int k=0; k < 4*Steps-1; k++) {
+                                   bFourier += ((((_MergedIntegrals.at(k)
+                                                        + _MergedIntegrals.at(k + 1)) / 2.0)
+                                                        * std::sin((floatT) bCount
+                                                        * ((_MergedAngles.at(k)
+                                                        + _MergedAngles.at(k + 1)) / 2.0)))
+                                                        * _intEnergDens._AngleStep) / PI;
+                            }
+                            _Fourier.at(bCount + 2) = bFourier / (a0 / 2.0);
+                            bFourier = 0.0;
+                     }
+                     a0 = 0.0;
+              }
+
        public:
               // constructor
               FlowCoefficients(EnergyDensity<floatT> & newEnergDens):
@@ -843,59 +992,11 @@ class FlowCoefficients{
                             _MergedIntegrals(4 * Steps),
                             _Fourier(6) {}
 
-              // merged vectors
-              void mergeVectors() {
-                     for(int i = 0; i < Steps; i++) {
-                     	_MergedAngles.at(i) = _intEnergDens._AngleSec1.at(i);
-                     	_MergedAngles.at(Steps + i) = _intEnergDens._AngleSec2.at(i);
-                            _MergedAngles.at(2 * Steps + i) = _intEnergDens._AngleSec3.at(i);
-                            _MergedAngles.at(3 * Steps + i) = _intEnergDens._AngleSec4.at(i);
+              void computFlowCoefficients(){
 
-                            _MergedIntegrals.at(i) = _intEnergDens._EDensSec1.at(i);
-                     	_MergedIntegrals.at(Steps + i) = _intEnergDens._EDensSec2.at(i);
-                            _MergedIntegrals.at(2 * Steps + i) = _intEnergDens._EDensSec3.at(i);
-                            _MergedIntegrals.at(3 * Steps + i) = _intEnergDens._EDensSec4.at(i);
-                     }
+
               }
 
-              //calculation of the flow coefficients
-              void flowCoefficients() {
-                     floatT a0 = 0.0;
-                     for(int i=0; i < 4 * Steps - 1; i++) {
-                     	a0 += (((_MergedIntegrals.at(i) + _MergedIntegrals.at(i + 1)) / 2.0)
-                                   * _intEnergDens._AngleStep) / PI;
-                     }
-
-                     floatT aFourier = 0.0;
-                     for(int aCount=1; aCount <= 3; aCount++) {
-                     	aFourier = 0.0;
-                     	for(int i=0; i < 4 * Steps - 1; i++) {
-                     		aFourier += ((((_MergedIntegrals.at(i) + _MergedIntegrals.at(i + 1)) / 2.0)
-                                                 * std::cos((floatT) aCount
-                                                               * ((_MergedAngles.at(i)
-                                                               + _MergedAngles.at(i + 1)) / 2.0)))
-                                                 * _intEnergDens._AngleStep) / PI;
-                     	}
-                     	_Fourier.at(aCount - 1) = aFourier / (a0 / 2.0);
-                     	aFourier = 0.0;
-                     }
-
-                     floatT bFourier = 0.0;
-                     for(int bCount=1; bCount <= 3; bCount++) {
-                     	bFourier = 0.0;
-                     	for(int k=0; k < 4*Steps-1; k++) {
-                     		bFourier += ((((_MergedIntegrals.at(k)
-                                                        + _MergedIntegrals.at(k + 1)) / 2.0)
-                                                        * std::sin((floatT) bCount
-                                                        * ((_MergedAngles.at(k)
-                                                        + _MergedAngles.at(k + 1)) / 2.0)))
-                                                        * _intEnergDens._AngleStep) / PI;
-                     	}
-                     	_Fourier.at(bCount + 2) = bFourier / (a0 / 2.0);
-                     	bFourier = 0.0;
-                     }
-                     a0 = 0.0;
-              }
 };
 
 template<class floatT>
@@ -938,7 +1039,7 @@ int main(int argc, char const *argv[]) {
 
        // computeTest();
 
-       FileWriterTest();
+       // FileWriterTest();
 
        std::cout << ( std::clock() - start ) / (double) CLOCKS_PER_SEC << "s" << '\n';
 
@@ -1087,7 +1188,9 @@ void computeTest(){
 
 void FileWriterTest(){
 
-       // FileWriter<PREC> file("test.txt");
+       FileWriter<PREC> file("test.txt");
+
+       file << "Dies is ein Test" << std::endl;
 
        Grid<PREC> grid(3001);
 
