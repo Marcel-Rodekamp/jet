@@ -80,14 +80,8 @@ class Grid{
                                           + 1 ) ,
                                    _maxSitesPerDirection(maxSitesPerDirection) {}
 
-<<<<<<< HEAD
               int inline getIndex(Site site){
                      return site.x() + site.y() + site.y() * _maxSitesPerDirection;
-=======
-              int getIndex(Site site){
-                     int max = _maxSitesPerDirection;
-                     return site.x() + site.y() + site.y()*max;
->>>>>>> Hendrik
               }
 
               void inline setSite(Site site, floatT value){
@@ -180,7 +174,7 @@ class FileWriter{
                      file.close();
               }
 
-              void writeFileEDens(Grid<floatT> * grid, int accuracy = 10){
+              void writeFileGrid(Grid<floatT> * grid, int accuracy = 10){
                      std::fstream file;
                      std::string newFilename;
                      newFilename.append("smearedEnergyDensity_");
@@ -193,13 +187,28 @@ class FileWriter{
                             for(int y = 0; y < grid -> getMaxSitesPerDirection(); y += accuracy){
 
                             Site site(x,y);
-                            file << ((double) x / 100.0) - 15.0 << "\t" << ((double) y / 100.0) - 15.0
+                            file << ((floatT) x / 100.0) - 15.0 << "\t" << ((floatT) y / 100.0) - 15.0
                             << "\t" << grid -> getSite(site) << std::endl;
 
 
                             }
                      }
 
+                     file.close();
+              }
+
+              void writeFileVector( std::vector<floatT> * data, std::string additionalFilename){
+                     //open the file for jet data
+                     std::fstream file;
+                     std::string newFilename;
+                     newFilename.append(additionalFilename);
+                     newFilename.append(_filename);
+
+                     for(int dataVectorIndex = 0; dataVectorIndex < data -> size(); dataVectorIndex++){
+                            file << data -> at(dataVectorIndex) << std::endl;
+                     }
+
+                     //close the jet data file
                      file.close();
               }
 };
@@ -242,6 +251,20 @@ class EnergyDensity{
                      Site tmpSite(0,0);
                      const int tmpRadNucleon = (int) _RadNucleon;
 
+                     // test site (0,0)
+                     if (_grid.getSite(site) != 0 ) {
+
+                            // loop through a square with side length tmpRadNucleon centered on the
+                            // not zero site
+                            for(int x = site.x() - tmpRadNucleon; x < site.x() + tmpRadNucleon; x++){
+                            for(int y = site.y() - tmpRadNucleon; y < site.y() + tmpRadNucleon; y++){
+                                   tmpSite.setX(x);
+                                   tmpSite.setY(y);
+                                   _gridSmeared.addSite(tmpSite,_grid.getSite(site));
+                            }
+                            }
+                     }
+
                      while(_grid.runThroughGrid(site)){
                             if (_grid.getSite(site) != 0 ) {
 
@@ -258,12 +281,12 @@ class EnergyDensity{
                      }
               }
 
-<<<<<<< HEAD
               Grid<floatT> * getSmearedEnergyDensData(){
                      return & _gridSmeared;
               }
+
 };
-=======
+
 template<class floatT>
 class IntegratedEnergyDensity{
        private:
@@ -336,8 +359,7 @@ class IntegratedEnergyDensity{
 
               // bilinear interpolation function between the grid points in the energy density grid
               floatT energyDensityInterpolation(floatT fP11, floatT fP12, floatT fP21, floatT fP22,
-                                          floatT x1, floatT x2, floatT x, floatT y1, floatT y2, floatT y)
-              {
+                                          floatT x1, floatT x2, floatT x, floatT y1, floatT y2, floatT y){
               	floatT x2x, x2x1, xx1, y2y, y2y1, yy1, interpolationValue;
               	x2x = x2 - x;
               	x2x1 = x2 - x1;
@@ -911,7 +933,6 @@ class FlowCoefficients{
               }
 };
 
->>>>>>> Hendrik
 
 int main(int argc, char const *argv[]) {
        std::clock_t start;
@@ -1035,5 +1056,5 @@ void computeTest(){
 
        energDens.smearedEnergyDensity();
 
-       file.writeFileEDens(energDens.getSmearedEnergyDensData());
+       file.writeFileGrid(energDens.getSmearedEnergyDensData());
 }
