@@ -332,6 +332,9 @@ class IntegratedEnergyDensity{
               std::vector<floatT> _RadiusFour;
               std::vector<floatT> _EDensFour;
 
+              std::vector<floatT> _Angle;
+              std::vector<floatT> _Integral;
+
               EnergyDensity<floatT> & _energDens;
 
        public:
@@ -362,6 +365,8 @@ class IntegratedEnergyDensity{
                                                         _EDensThree(3000 - (int) ((startSite.y() + 15. ) * 100.)),
                                                         _RadiusFour((int) ((startSite.y() + 15. ) * 100.)),
                                                         _EDensFour((int) ((startSite.y() + 15. ) * 100.)),
+                                                        _Angle(4 * Steps),
+                                                        _Integral(4 * Steps),
                                                         _energDens(newEnergDens) {}
 
 
@@ -711,6 +716,33 @@ class IntegratedEnergyDensity{
                      }
               }
 
+              void angles(int NEvents) {
+                     for (int i = 0; i < Steps; i++) {
+                            _Angle.at(i) = _AverageEDens1.at(i) / NEvents;
+                            _Angle.at(Steps + i) = _AverageEDens2.at(i) / NEvents;
+                            _Angle.at(2 * Steps + i) = _AverageEDens3.at(i) / NEvents;
+                            _Angle.at(3 * Steps + i) = _AverageEDens4.at(i) / NEvents;
+                     }
+              }
+
+              void integrals(int NEvents) {
+                     for (int i = 0; i < Steps; i++) {
+                            _Integral.at(i) = _AverageEDens1.at(i) / NEvents;
+                            _Integral.at(Steps + i) = _AverageEDens2.at(i) / NEvents;
+                            _Integral.at(2 * Steps + i) = _AverageEDens3.at(i) / NEvents;
+                            _Integral.at(3 * Steps + i) = _AverageEDens4.at(i) / NEvents;
+                     }
+              }
+
+              IntegratedEnergyDensity<floatT> * getIntegrationEDensValAngles() {
+                     return & _Angle;
+              }
+
+              IntegratedEnergyDensity<floatT> * getIntegrationEDensValIntegrals() {
+                     return & _Integral;
+              }
+
+
               friend class Eccentricity<floatT>;
               friend class FlowCoefficients<floatT>;
 };
@@ -853,11 +885,13 @@ class Eccentricity{
                                    }
                             }
                      }
+              }
 
-
+              void eventEccentricity() {
                      //calculate the eccentricity e2 ... e5 for one event and store the value in the array
                      for(int n = 0; n < 4; n++){
-              	             _EventEccentricity.at(n) = std::abs(-(_EccCounter1.at(n) + _EccCounter2.at(n)
+                                  _EventEccentricity.at(n) = std::abs(
+                                          -(_EccCounter1.at(n) + _EccCounter2.at(n)
                                           + _EccCounter3.at(n) + _EccCounter4.at(n))
                                           / (_EccDenom1.at(n) + _EccDenom2.at(n)
                                           + _EccDenom3.at(n) + _EccDenom4.at(n)));
@@ -1050,7 +1084,7 @@ void computeTest(){
 
        std::string filename = "Pb67.6.txt";
 
-       FileWriter<PREC> file(NEvents,NNucleonsCore, filename);
+       FileWriter<PREC> file(NEvents, NNucleonsCore, filename);
 
        file.readFile(rawDataGrid);
 
@@ -1075,5 +1109,20 @@ void computeTest(){
        intEnergDens.sector3();
        intEnergDens.sector4();
 
-       //intEnergDens.averagedIntegral();
+       intEnergDens.averagedIntegral();
+       intEnergDens.angles(NEvents);
+       intEnergDens.integrals(NEvents);
+
+       file.writeFileVector(intEnergDens.getIntegrationEDensValAngles(), "Angle.dat");
+       file.writeFileVector(intEnergDens.getIntegrationEDensValIntegrals(), "IntegratedEnergyDensity.dat")
+
+/*       Eccentricity<PREC> ecc(intEnergDens);
+
+       ecc.eccentricitySector1();
+       ecc.eccentricitySector2();
+       ecc.eccentricitySector3();
+       ecc.eccentricitySector4();
+       ecc.eventEccentricity();
+
+       file.writeFileVector(, "Eccentricity.dat");*/
 }
