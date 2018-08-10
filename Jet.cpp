@@ -18,9 +18,11 @@ template<class floatT> class IntegratedEnergyDensity;
 template<class floatT> class Eccentricity;
 template<class floatT> class FlowCoefficients;
 
+
 void indexerTest(int max);
 void runThroughGridTest(int max);
 void computeTest();
+void FileWriterTest();
 
 // structure to define the lattice points leaving out the z component due to the contemplated event plane
 class Site{
@@ -65,7 +67,6 @@ class Site{
               void inline setY(int newY){
                      VCoordinates.at(1) = newY;
               }
-
 };
 
 // class to store data
@@ -106,6 +107,7 @@ class Grid{
               }
 
               // run through the whole grid
+              // TODO What happens at site s(0,0)!!!
               bool runThroughGrid(Site & site){
                      // compute possible new x value
                      int newCoordX = site.x() + 1;
@@ -136,86 +138,47 @@ class Grid{
 template<class floatT>
 class FileWriter{
        private:
-              int _NEvents;
-              int _NNucleonsCore;
-              std::string _filename;
+                  const std::string _fileName;
+                  std::ofstream _fileStream;
+
+
+                  //! initializes class, automatically called by constructors
+                  void init() {
+
+
+                         _fileStream.open(_fileName.c_str());
+
+                          if(!_fileStream.is_open()){
+                                 std::cout << "File could not be opened" << '\n';
+                                 return;
+                          }
+
+                         // set high precision
+                         _fileStream.precision(15);
+                         _fileStream.setf(std::ios::scientific);
+                  }
+
        public:
+
               // constructor
-              FileWriter(int newNEvents, int newNNucleonsCore, std::string newFilename) :
-                                                        _NEvents(newNEvents),
-                                                        _NNucleonsCore(newNNucleonsCore),
-                                                        _filename(newFilename) {}
+              FileWriter(std::string fname) :
+                            _fileName(fname) {
+                     init();
+              };
 
-              void readFile(Grid<floatT> & grid){
-                     std::fstream file;
-                     file.open(_filename.c_str(), std::ios::in);
-
-                     if(!file.is_open()){return;}
-
-                     std::vector<floatT> row(4);
-
-                     // loop through the data file which format is clarified by
-                     // x corrd \t y coord \t z coord \t NColl
-                     for(int i = 0; i < 2 * _NEvents * _NNucleonsCore; ++i){
-                            for(int col = 0; col < 4 ; ++col){
-                                   file >> row[col];
-                            }
-                            // translate the euclidean coordinates into the grid coordinates
-                            // leaving out the z component
-                            int x = (row[0] + 15)*100;
-                            int y = (row[1] + 15)*100;
-
-                            if(x > grid.getMaxSitesPerDirection() ||
-                               y > grid.getMaxSitesPerDirection()  ) {
-                                          std::cout << "ERROR@readFile: Coordinates out of grid!" << '\n';
-                            }
-
-                            // compute the site
-                            Site site(x, y);
-
-                            // set NColl on the grid
-                            grid.setSite(site, row[3]);
-                     }
-
-                     file.close();
+              std::ofstream & operator<< (const floatT &obj) {
+                     _fileStream << obj;
+                     return _fileStream;
               }
 
-              void writeFileGrid(Grid<floatT> * grid, int accuracy = 10){
-                     std::fstream file;
-                     std::string newFilename;
-                     newFilename.append("smearedEnergyDensity_");
-                     newFilename.append(_filename);
-                     file.open(newFilename, std::ios::out);
-
-                     if(!file.is_open()){return;}
-
-                     for(int x = 0; x < grid -> getMaxSitesPerDirection(); x += accuracy){
-                            for(int y = 0; y < grid -> getMaxSitesPerDirection(); y += accuracy){
-
-                            Site site(x,y);
-                            file << ((floatT) x / 100.0) - 15.0 << "\t" << ((floatT) y / 100.0) - 15.0
-                            << "\t" << grid -> getSite(site) << std::endl;
-
-
-                            }
-                     }
-
-                     file.close();
+              std::ofstream & operator<< (const std::string &string_obj) {
+                     _fileStream << string_obj;
+                     return _fileStream;
               }
 
-              void writeFileVector( std::vector<floatT> * data, std::string additionalFilename){
-                     //open the file for jet data
-                     std::fstream file;
-                     std::string newFilename;
-                     newFilename.append(additionalFilename);
-                     newFilename.append(_filename);
-
-                     for(int dataVectorIndex = 0; dataVectorIndex < data -> size(); dataVectorIndex++){
-                            file << data -> at(dataVectorIndex) << std::endl;
-                     }
-
-                     //close the jet data file
-                     file.close();
+              //! Close the ostream
+              ~FileWriter() {
+                     _fileStream.close();
               }
 };
 
@@ -383,7 +346,6 @@ class IntegratedEnergyDensity{
               	return interpolationValue = (1.0 / (x2x1 * y2y1)) * (fP11 * x2x * y2y + fP21 * xx1 * y2y
                                                  + fP12 * x2x * yy1 + fP22 * xx1 * yy1);
               }
-
 
               // calculation for the right sector (sector 1) from 7/4 pi to 1/4 pi
               void sector1() {
@@ -936,6 +898,35 @@ class FlowCoefficients{
               }
 };
 
+template<class floatT>
+void readData(Grid<floatT> & grid, const std::string fileName, int NEvents, int NNucleonsCore ){
+       std::fstream file;
+       file.open(fileName.c_str(), std::ios::in);
+
+       if(!file.is_open()){return;}
+
+       std::vector<floatT> row(4);
+       // loop through the data file which format is clarified by
+       // x corrd \t y coord \t z coord \t NColl
+       for(int i = 0; i < 2 * NEvents * NNucleonsCore; ++i){
+              for(int col = 0; col < 4 ; ++col){
+                     file >> row[col];
+              }
+              // translate the euclidean coordinates into the grid coordinates
+              // leaving out the z component
+              int x = (row[0] + 15)*100;
+              int y = (row[1] + 15)*100;
+              if(x > grid.getMaxSitesPerDirection() || y > grid.getMaxSitesPerDirection()) {
+                     std::cout << "ERROR@readFile: Coordinates out of grid!" << '\n';
+              }
+              // compute the site
+              Site site(x, y);
+              // set NColl on the grid
+              grid.setSite(site, row[3]);
+       }
+
+        file.close();
+}
 
 int main(int argc, char const *argv[]) {
        std::clock_t start;
@@ -945,16 +936,14 @@ int main(int argc, char const *argv[]) {
 
        // runThroughGridTest(3);
 
-       computeTest();
+       // computeTest();
+
+       FileWriterTest();
 
        std::cout << ( std::clock() - start ) / (double) CLOCKS_PER_SEC << "s" << '\n';
 
        return 0;
 }
-
-
-
-
 
 // Testing routins
 
@@ -994,7 +983,7 @@ void runThroughGridTest(int max){
 
        Site site(0,0);
        int vectorIndex = 0;
-       std::cout << "now at (x,y): (" << site.x() << "," << site.y() << ")" << '\n';
+
        while(grid.runThroughGrid(site)){
               std::cout << "now at (x,y): (" << site.x() << "," << site.y() << ")" << '\n';
        }
@@ -1047,9 +1036,9 @@ void computeTest(){
 
        std::string filename = "Pb67.6.txt";
 
-       FileWriter<PREC> file(NEvents, NNucleonsCore, filename);
+       FileWriter<PREC> file(filename);
 
-       file.readFile(rawDataGrid);
+       // file.readFile(rawDataGrid);
 
        std::cout << "Compute energy density" << '\n';
 
@@ -1079,7 +1068,7 @@ void computeTest(){
        file.writeFileVector(intEnergDens.getIntegrationEDensValAngles(), "Angle.dat");
        file.writeFileVector(intEnergDens.getIntegrationEDensValIntegrals(), "IntegratedEnergyDensity.dat");
 
-/*       Eccentricity<PREC> ecc(intEnergDens);
+       /*       Eccentricity<PREC> ecc(intEnergDens);
 
        ecc.eccentricitySector1();
        ecc.eccentricitySector2();
@@ -1088,4 +1077,19 @@ void computeTest(){
        ecc.eventEccentricity();
 
        file.writeFileVector(, "Eccentricity.dat");*/
+
+       // file.writeFileGrid(energDens.getSmearedEnergyDensData());
+
+       // file.writeFileGrid(energDens.getSmearedEnergyDensData());
+}
+
+// Test FileWriter
+
+void FileWriterTest(){
+
+       // FileWriter<PREC> file("test.txt");
+
+       Grid<PREC> grid(3001);
+
+       readData<PREC>(grid, "Pb67.6.txt", 1, 208);
 }
