@@ -742,7 +742,6 @@ class IntegratedEnergyDensity{
                      return & _Integral;
               }
 
-
               friend class Eccentricity<floatT>;
               friend class FlowCoefficients<floatT>;
 };
@@ -750,115 +749,73 @@ class IntegratedEnergyDensity{
 template<class floatT>
 class Eccentricity{
        private:
-              // vectors for the eccentricity values of all sectors
-              std::vector<std::complex<floatT>> _EccCounter1;
-              std::vector<std::complex<floatT>> _EccDenom1;
-
-              std::vector<std::complex<floatT>> _EccCounter2;
-              std::vector<std::complex<floatT>> _EccDenom2;
-
-              std::vector<std::complex<floatT>> _EccCounter3;
-              std::vector<std::complex<floatT>> _EccDenom3;
-
-              std::vector<std::complex<floatT>> _EccCounter4;
-              std::vector<std::complex<floatT>> _EccDenom4;
+              std::vector<std::complex<floatT>> _EccCounter;
+              std::vector<std::complex<floatT>> _EccDenom;
 
               std::vector<floatT> _EventEccentricity;
 
               IntegratedEnergyDensity<floatT> & _intEnergDens;
 
+              void _computeEccConterAndDnomPerSector(  std::vector<floatT> * radius,
+                                          std::vector<floatT> * eneDens,
+                                          std::vector<floatT> * angle ){
+                     // define the imaginary I
+                     const std::complex<floatT> I(0.0,1.0);
+
+                     // perform a trapezoidal integration to calculate the eccentricity e2 ... e5
+                     for (int i = 0; i < Steps; i++) {
+                            for(int n =  2; n <= 5; n++) {
+                                   for(int j = 0; j < 3000 - _intEnergDens._JetStartX; j++) {
+                                          _EccCounter.at(n - 2) += 0.5 * (radius.at(j + 1) - radius.at(j))
+                                                        * (eneDens.at(j) * std::pow(radius.at(j),(n + 1))
+                                                               + eneDens.at(j + 1)
+                                                               * std::pow(radius.at(j + 1),(n + 1)))
+                                                        * exp(I * ((floatT) n * angle.at(i)));
+
+                                          _EccDenom.at(n - 2) += 0.5 * (radius.at(j + 1) - radius.at(j))
+                                                        * (eneDens.at(j)
+                                                               * std::pow(radius.at(j),(n + 1))
+                                                               + eneDens.at(j + 1)
+                                                               * std::pow(radius.at(j + 1),(n + 1)));
+                                   }
+                            }
+                     }
+              }
+
+              void inline _computeEcc(){
+                     // calculation of the eccentricity count and Dnorm for sector 1
+                     _computeEccConterAndDnomPerSector(_intEnergDens._RadiusOne, _intEnergDens._EDensOne,
+                                   _intEnergDens._AngleSec1);
+
+                     // calculation of the eccentricity count and Dnorm for sector 2
+                     _computeEccConterAndDnomPerSector(_intEnergDens._RadiusTwo, _intEnergDens._EDensTwo,
+                                   _intEnergDens._AngleSec2);
+
+                     // calculation of the eccentricity count and Dnorm for sector 3
+                     _computeEccConterAndDnomPerSector(_intEnergDens._RadiusThree, _intEnergDens._EDensThree,
+                                   _intEnergDens._AngleSec3);
+
+                     // calculation of the eccentricity count and Dnorm for sector 4
+                     _computeEccConterAndDnomPerSector(_intEnergDens._RadiusFour, _intEnergDens._EDensFour,
+                                   _intEnergDens._AngleSec4);
+
+                     // calculation of the eccentricity
+                     for(int n = 0; n < 4; n++){
+                            _EventEccentricity.at(n) = std::abs(-_EccCounter.at(n)/_EccDenom.at(n));
+                     }
+              }
+
        public:
               // constructor
               Eccentricity(IntegratedEnergyDensity<floatT> & newIntEnergDens):
                             _intEnergDens(newIntEnergDens),
-                            _EccCounter1(4),
-                            _EccDenom1(4),
-                            _EccCounter2(4),
-                            _EccDenom2(4),
-                            _EccCounter3(4),
-                            _EccDenom3(4),
-                            _EccCounter4(4),
-                            _EccDenom4(4),
+                            _EccCounter(4),
+                            _EccDenom(4),
                             _EventEccentricity(4) {}
 
-              // calculation of the eccentricity for sector 1
-              void eccentricitySector1() {
-                     //define the imaginary I
-                     const std::complex<floatT> I(0.0,1.0);
-                     // perform a trapezoidal integration to calculate the eccentricity e2 ... e5
-                     for (int i = 0; i < Steps; i++) {
-                            for(int n =  2; n <= 5; n++) {
-                                   for(int j = 0; j < 3000 - _intEnergDens._JetStartX; j++) {
-                                          _EccCounter1.at(n - 2) += (_intEnergDens._RadiusOne.at(j + 1)
-                                                        - _intEnergDens._RadiusOne.at(j)) * 0.5
-                                                        * (_intEnergDens._EDensOne.at(j)
-                                                        * std::pow(_intEnergDens._RadiusOne.at(j),(n + 1))
-                                                        + _intEnergDens._EDensOne.at(j + 1)
-                                                        * std::pow(_intEnergDens._RadiusOne.at(j + 1),(n + 1)))
-                                                        * exp(I * ((floatT) n * _intEnergDens._AngleSec1.at(i)));
-
-                                          _EccDenom1.at(n - 2) += (_intEnergDens._RadiusOne.at(j + 1)
-                                                        - _intEnergDens._RadiusOne.at(j)) * 0.5
-                                                        * (_intEnergDens._EDensOne.at(j)
-                                                        * std::pow(_intEnergDens._RadiusOne.at(j),(n + 1))
-                                                        + _intEnergDens._EDensOne.at(j + 1)
-                                                        * std::pow(_intEnergDens._RadiusOne.at(j + 1),(n + 1)));
-                                   }
-                            }
-                     }
-              }
-
-              void eccentricitySector2() {
-                     //define the imaginary I
-                     const std::complex<floatT> I(0.0,1.0);
-                     // perform a trapezoidal integration to calculate the eccentricity e2 ... e5
-                     for (int i = 0; i < Steps; i++) {
-                            for(int n =  2; n <= 5; n++) {
-                                   for(int j = 0; j < 3000 - _intEnergDens._JetStartX; j++){
-                                          _EccCounter2.at(n - 2) += (_intEnergDens._RadiusTwo.at(j + 1)
-                                                 - _intEnergDens._RadiusTwo.at(j)) * 0.5
-                                                 * (_intEnergDens._EDensTwo.at(j)
-                                                 * std::pow(_intEnergDens._RadiusTwo.at(j),(n + 1))
-                                                 + _intEnergDens._EDensTwo.at(j + 1)
-                                                 * std::pow(_intEnergDens._RadiusTwo.at(j + 1),(n + 1)))
-                                                 * exp(I * ((floatT) n * _intEnergDens._AngleSec2.at(i)));
-
-                                          _EccDenom2.at(n - 2) += (_intEnergDens._RadiusTwo.at(j + 1)
-                                                 - _intEnergDens._RadiusTwo.at(j)) * 0.5
-                                                 * (_intEnergDens._EDensTwo.at(j)
-                                                 * std::pow(_intEnergDens._RadiusTwo.at(j),(n + 1))
-                                                 +_intEnergDens._EDensTwo.at(j + 1)
-                                                 * std::pow(_intEnergDens._RadiusTwo.at(j + 1),(n + 1)));
-                                   }
-                            }
-                     }
-              }
-
-              void eccentricitySector3() {
-                     //define the imaginary I
-                     const std::complex<floatT> I(0.0,1.0);
-                     // perform a trapezoidal integration to calculate the eccentricity e2 ... e5
-                     for (int i = 0; i < Steps; i++) {
-                            for(int n =  2; n <= 5; n++) {
-                                   for(int j = 0; j < 3000 - _intEnergDens._JetStartX; j++) {
-                                          _EccCounter3.at(n - 2) += (_intEnergDens._RadiusThree.at(j + 1)
-                                                        - _intEnergDens._RadiusThree.at(j)) * 0.5
-                                                        * (_intEnergDens._EDensThree.at(j)
-                                                        * std::pow(_intEnergDens._RadiusThree.at(j),(n + 1))
-                                                        + _intEnergDens._EDensThree.at(j + 1)
-                                                        * std::pow(_intEnergDens._RadiusThree.at(j + 1),(n + 1)))
-                                                        * exp(I * ((floatT) n * _intEnergDens._AngleSec3.at(i)));
-
-                                          _EccDenom3.at(n - 2) += (_intEnergDens._RadiusThree.at(j + 1)
-                                                        - _intEnergDens._RadiusThree.at(j)) * 0.5
-                                                        * (_intEnergDens._EDensThree.at(j)
-                                                        * std::pow(_intEnergDens._RadiusThree.at(j),(n + 1))
-                                                        + _intEnergDens._EDensThree.at(j + 1)
-                                                        * std::pow(_intEnergDens._RadiusThree.at(j + 1),(n + 1)));
-                                   }
-                            }
-                     }
-
+              // calculate the eccentricity e2 ... e5 for one event and store the value in the array
+              void computeEccentricity(){
+                     _computeEcc();
               }
 
               void eccentricitySector4() {
@@ -897,6 +854,12 @@ class Eccentricity{
                                           + _EccDenom3.at(n) + _EccDenom4.at(n)));
                      }
               }
+
+              std::vector<floatT> * getEccenetricityData(){
+                     return & _EventEccentricity;
+              }
+
+
 
 };
 
