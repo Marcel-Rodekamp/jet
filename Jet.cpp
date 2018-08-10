@@ -10,8 +10,13 @@
 #define PI 3.14159265358979323846
 #define Steps 500
 
-struct Site;
+class Site;
 template<class floatT> class Grid;
+template<class floatT> class FileWriter;
+template<class floatT> class EnergyDensity;
+template<class floatT> class IntegratedEnergyDensity;
+template<class floatT> class Eccentricity;
+template<class floatT> class FlowCoefficients;
 
 void indexerTest(int max);
 void runThroughGridTest(int max);
@@ -136,7 +141,8 @@ class FileWriter{
               std::string _filename;
        public:
               // constructor
-              FileWriter(int newNEvents, int newNNucleonsCore, std::string newFilename) : _NEvents(newNEvents),
+              FileWriter(int newNEvents, int newNNucleonsCore, std::string newFilename) :
+                                                        _NEvents(newNEvents),
                                                         _NNucleonsCore(newNNucleonsCore),
                                                         _filename(newFilename) {}
 
@@ -285,6 +291,8 @@ class EnergyDensity{
                      return & _gridSmeared;
               }
 
+              friend class IntegratedEnergyDensity<floatT>;
+
 };
 
 template<class floatT>
@@ -298,8 +306,6 @@ class IntegratedEnergyDensity{
 
               // angle steps for radial integration
               floatT _AngleStep;
-
-              EnergyDensity<floatT> & _energDens;
 
               // vectors for the calculated angle and integrated energy density
               std::vector<floatT> _AngleSec1;
@@ -326,6 +332,8 @@ class IntegratedEnergyDensity{
               std::vector<floatT> _RadiusFour;
               std::vector<floatT> _EDensFour;
 
+              EnergyDensity<floatT> & _energDens;
+
        public:
               // constructor
               IntegratedEnergyDensity(Site startSite, EnergyDensity<floatT> & newEnergDens):
@@ -334,15 +342,14 @@ class IntegratedEnergyDensity{
                                                         _JetStartX((int) ((startSite.x() + 15. ) * 100.) ),
                                                         _JetStartY((int) ((startSite.y() + 15. ) * 100.) ),
                                                         _AngleStep((PI / 2.0) / ((floatT) Steps)),
-                                                        _energDens(newEnergDens),
                                                         _AngleSec1(Steps),
                                                         _EDensSec1(Steps),
                                                         _AngleSec2(Steps),
                                                         _EDensSec2(Steps),
                                                         _AngleSec3(Steps),
                                                         _EDensSec3(Steps),
-                                                        _AngleSec3(Steps),
-                                                        _EDensSec3(Steps),
+                                                        _AngleSec4(Steps),
+                                                        _EDensSec4(Steps),
                                                         _AverageEDens1(Steps),
                                                         _AverageEDens2(Steps),
                                                         _AverageEDens3(Steps),
@@ -354,7 +361,8 @@ class IntegratedEnergyDensity{
                                                         _RadiusThree(3000 - (int) ((startSite.y() + 15. ) * 100.)),
                                                         _EDensThree(3000 - (int) ((startSite.y() + 15. ) * 100.)),
                                                         _RadiusFour((int) ((startSite.y() + 15. ) * 100.)),
-                                                        _EDensFour((int) ((startSite.y() + 15. ) * 100.)) {}
+                                                        _EDensFour((int) ((startSite.y() + 15. ) * 100.)),
+                                                        _energDens(newEnergDens) {}
 
 
               // bilinear interpolation function between the grid points in the energy density grid
@@ -703,10 +711,9 @@ class IntegratedEnergyDensity{
                      }
               }
 
-              friend class Eccentricity;
-              friend class FlowCoefficients;
+              friend class Eccentricity<floatT>;
+              friend class FlowCoefficients<floatT>;
 };
-
 
 template<class floatT>
 class Eccentricity{
@@ -858,7 +865,6 @@ class Eccentricity{
               }
 
 };
-
 
 template<class floatT>
 class FlowCoefficients{
@@ -1060,12 +1066,14 @@ void computeTest(){
 
        std::cout << "Compute integrations in all directions" << '\n';
 
-       IntegratedEnergyDensity<PREC> intEnergDens(Site(0, 0), energDens);
+       Site startSite(0,0);
+
+       IntegratedEnergyDensity<PREC> intEnergDens(startSite, energDens);
 
        intEnergDens.sector1();
        intEnergDens.sector2();
        intEnergDens.sector3();
        intEnergDens.sector4();
 
-       intEnergDens.averagedIntegral();
+       //intEnergDens.averagedIntegral();
 }
