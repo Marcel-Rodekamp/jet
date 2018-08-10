@@ -268,11 +268,8 @@ class IntegratedEnergyDensity{
               // angle steps for radial integration
               floatT _AngleStep;
 
-<<<<<<< HEAD
-=======
               Grid<floatT> & _smearEnerDensGrid;
 
->>>>>>> Marcel
               // vectors for the calculated angle and integrated energy density
               std::vector<floatT> _AngleSec1;
               std::vector<floatT> _EDensSec1;
@@ -301,61 +298,6 @@ class IntegratedEnergyDensity{
               std::vector<floatT> _RadiusFour;
               std::vector<floatT> _EDensFour;
 
-<<<<<<< HEAD
-              std::vector<floatT> _Angle;
-              std::vector<floatT> _Integral;
-
-              EnergyDensity<floatT> & _energDens;
-
-       public:
-              // constructor
-              IntegratedEnergyDensity(Site startSite, EnergyDensity<floatT> & newEnergDens):
-                                                        _RealX(startSite.x()),
-                                                        _RealY(startSite.y()),
-                                                        _JetStartX((int) ((startSite.x() + 15. ) * 100.) ),
-                                                        _JetStartY((int) ((startSite.y() + 15. ) * 100.) ),
-                                                        _AngleStep((PI / 2.0) / ((floatT) Steps)),
-                                                        _AngleSec1(Steps),
-                                                        _EDensSec1(Steps),
-                                                        _AngleSec2(Steps),
-                                                        _EDensSec2(Steps),
-                                                        _AngleSec3(Steps),
-                                                        _EDensSec3(Steps),
-                                                        _AngleSec4(Steps),
-                                                        _EDensSec4(Steps),
-                                                        _AverageEDens1(Steps),
-                                                        _AverageEDens2(Steps),
-                                                        _AverageEDens3(Steps),
-                                                        _AverageEDens4(Steps),
-                                                        _RadiusOne(3000 - (int) ((startSite.x() + 15. ) * 100.)),
-                                                        _EDensOne(3000 - (int) ((startSite.x() + 15. ) * 100.)),
-                                                        _RadiusTwo((int) ((startSite.x() + 15. ) * 100.)),
-                                                        _EDensTwo((int) ((startSite.x() + 15. ) * 100.)),
-                                                        _RadiusThree(3000 - (int) ((startSite.y() + 15. ) * 100.)),
-                                                        _EDensThree(3000 - (int) ((startSite.y() + 15. ) * 100.)),
-                                                        _RadiusFour((int) ((startSite.y() + 15. ) * 100.)),
-                                                        _EDensFour((int) ((startSite.y() + 15. ) * 100.)),
-                                                        _Angle(4 * Steps),
-                                                        _Integral(4 * Steps),
-                                                        _energDens(newEnergDens) {}
-
-
-              // bilinear interpolation function between the grid points in the energy density grid
-              floatT energyDensityInterpolation(floatT fP11, floatT fP12, floatT fP21, floatT fP22,
-                                          floatT x1, floatT x2, floatT x, floatT y1, floatT y2, floatT y){
-              	floatT x2x, x2x1, xx1, y2y, y2y1, yy1, interpolationValue;
-              	x2x = x2 - x;
-              	x2x1 = x2 - x1;
-              	xx1 = x - x1;
-              	y2y = y2 - y;
-              	y2y1 = y2 - y1;
-              	yy1 = y - y1;
-              	return interpolationValue = (1.0 / (x2x1 * y2y1)) * (fP11 * x2x * y2y + fP21 * xx1 * y2y
-                                                 + fP12 * x2x * yy1 + fP22 * xx1 * yy1);
-              }
-
-=======
->>>>>>> Marcel
               // calculation for the right sector (sector 1) from 7/4 pi to 1/4 pi
               void _sector1() {
                      // PhiOne is the angle with respect to the origin in real space
@@ -391,7 +333,8 @@ class IntegratedEnergyDensity{
                                    // check wheather the point lies on the grid or not (needed for
                                    // integration which does not start at the origin (real (0.0,0.0))
 
-                     		if(y < _smearEnerDensGrid.getMaxSitesPerDirection() && y >= 0.0) {
+                     		if(interCoordy < _smearEnerDensGrid.getMaxSitesPerDirection()
+                                          && interCoordy >= 0.0) {
                                           // find the four gridpoints {(x1,y1),(x2,y1),(x1,y2),(x2,y2)}
                                           // for the interpolation around a point (x,y)
                      			interCoordx_1 = std::floor((floatT) interCoordx);
@@ -412,15 +355,6 @@ class IntegratedEnergyDensity{
                                                                                        interCoordy_2,
                                                                                        interCoordy);
 
-<<<<<<< HEAD
-                     			floatT Interpol = energyDensityInterpolation(
-                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP1),
-                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP2),
-                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP3),
-                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP4),
-                                                 x1, x2, (floatT) x, y1, y2, y);
-=======
->>>>>>> Marcel
                                           // calculate the distance from the jet origin
                      			distFromJetStart = std::hypot(
                                                  (((floatT) interCoordx - (floatT) _JetStartX) / 100.0),
@@ -454,7 +388,8 @@ class IntegratedEnergyDensity{
 
                      // calculate the angle from the center of mass (real (0.0,0.0))
                      interCoordy = slope
-                            * (_smearEnerDensGrid.getMaxSitesPerDirection() - _JetStartX - 1) + _JetStartY;
+                            * (_smearEnerDensGrid.getMaxSitesPerDirection() - _JetStartX - 1)
+                            + (floatT) _JetStartY;
 
                      PhiOne = std::abs(std::atan(
                             (interCoordy - ((floatT) _smearEnerDensGrid.getMaxSitesPerDirection() - 1.)/2.)
@@ -472,74 +407,95 @@ class IntegratedEnergyDensity{
               void _sector2() {
                      // PhiTwo is the angle with respect to the origin in real space
                      floatT PhiTwo = 0.0;
+
                      // alpha is the angle seen from the start point of the integration
-                     floatT Alpha2 = (3.0 * PI) / 4.0;
-                     for(int i = 0; i < Steps; i++) {
+                     floatT angleAlpha = (3.0 * PI) / 4.0;
+
+                     // interpolation coord
+                     floatT interCoordx_1, interCoordy_1;
+                     floatT interCoordx_2, interCoordy_2;
+                     floatT interCoordy;
+
+                     floatT distFromJetStart;
+
+                     floatT Integral;
+
+                     for(int step = 0; step < Steps; step++) {
+                            // set integral to 0 for += notation
+                            Integral = 0.0;
+
                             // calculate the slope from alpha
-                     	floatT m = std::tan(Alpha2);
-                     	floatT x1, x2, y, y1, y2;
+                     	floatT slope = std::tan(angleAlpha);
+
                             // point-slope form of equation for straight line y = m(x-x1)+y1
                             // calculate for each x value of the grid a value for y
-                     	for(int x = _JetStartX; x >= 0; x--) {
-                     		floatT y = m*((floatT) x - (floatT) _JetStartX) + (floatT) _JetStartY;
+                     	for(int interCoordx = _JetStartX; interCoordx >= 0; x--) {
+
+                     		interCoordy = slope * (interCoordx - _JetStartX) + _JetStartY;
+
                                    // check wheather the point lies on the grid or not (needed for
                                    // integration which does not start at the origin (real (0.0,0.0))
-                     		if(y <= 3000.0 && y >= 0.0) {
+
+                                   if(interCoordy < _smearEnerDensGrid.getMaxSitesPerDirection()
+                                          && interCoordy >= 0.0) {
                                           // find the four gridpoints {(x1,y1),(x2,y1),(x1,y2),(x2,y2)}
                                           // for the interpolation around a point (x,y)
-                     			x1 = std::floor((floatT) x);
-                     			x2 = std::floor((floatT) x + 1.0);
-                     			y1 = std::floor(y);
-                     			y2 = std::floor(y + 1.0);
-                                          // define the points where the energy density grid is read out
-                                          Site siteP1((int) x1, (int) y1);
-                                          Site siteP2((int) x1, (int) y2);
-                                          Site siteP3((int) x2, (int) y1);
-                                          Site siteP4((int) x2, (int) y2);
+                                          interCoordx_1 = std::floor((floatT) interCoordx);
+                     			interCoordx_2 = std::floor((floatT) interCoordx + 1.0);
+                     			interCoordy_1 = std::floor(interCoordy);
+                     			interCoordy_2 = std::floor(interCoordy + 1.0);
 
-                                          floatT Interpol = energyDensityInterpolation(
-                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP1),
-                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP2),
-                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP3),
-                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP4),
-                                                 x1, x2, (floatT) x, y1, y2, y);
+                                          // define the points where the energy density grid is read out
+                     			Site siteP1((int) interCoordx_1, (int) interCoordy_1);
+                                          Site siteP2((int) interCoordx_1, (int) interCoordy_2);
+                                          Site siteP3((int) interCoordx_2, (int) interCoordy_1);
+                                          Site siteP4((int) interCoordx_2, (int) interCoordy_2);
+
+                     			floatT Interpol = energyDensityInterpolation(interCoordx_1,
+                                                                                       interCoordx_2,
+                                                                                       (floatT) interCoordx,
+                                                                                       interCoordy_1,
+                                                                                       interCoordy_2,
+                                                                                       interCoordy);
+
                                           // calculate the distance from the jet origin
-                     			floatT r = std::hypot((((floatT) x - (floatT) _JetStartX) / 100.0),
-                                                        ((y - (floatT) _JetStartY) / 100.0));
+                     			distFromJetStart = std::hypot(
+                                                 (((floatT) interCoordx - (floatT) _JetStartX) / 100.0),
+                                                 ((interCoordy - (floatT) _JetStartY) / 100.0));
                                           // store point at line and the interpolated value at that point
-                     			_RadiusTwo.at(_JetStartX - x) = r;
-                     			_EDensTwo.at(_JetStartX - x) = Interpol;
+                     			_RadiusTwo.at(_JetStartX - interCoordx) = distFromJetStart;
+                     			_EDensTwo.at(_JetStartX - interCoordx) = Interpol;
                      		}
                      		else {
                                           // calculate the distance from the jet origin
-                                          floatT r = std::hypot((((floatT) x - (floatT) _JetStartX) / 100.0),
-                                                 ((y - (floatT) _JetStartY) / 100.0));
+                                          distFromJetStart = std::hypot(
+                                                 (((floatT) interCoordx - (floatT) _JetStartX) / 100.0),
+                                                 ((interCoordy - (floatT) _JetStartY) / 100.0));
                                           // store point at line and the interpolated value at that point
-                                          _RadiusTwo.at(_JetStartX - x) = r;
-                                          _EDensTwo.at(_JetStartX - x) = 0.0;
+                                          _RadiusTwo.at(_JetStartX - interCoordx) = distFromJetStart;
+                                          _EDensTwo.at(_JetStartX - interCoordx) = 0.0;
                      		}
                      	}
 
                             // perform a trapezoidal integration along the line
-                            floatT Integral = 0.0;
-                            for(int j = 0; j <= _JetStartX; j++)
+                            for(int inteStep = 0; inteStep <= _JetStartX; j++)
                             {
-                                   Integral += 0.5*(_RadiusTwo.at(j + 1) - _RadiusTwo.at(j))
-                                          * (_EDensTwo.at(j) + _EDensTwo.at(j + 1));
+                                   Integral += 0.5*(_RadiusTwo.at(inteStep + 1) - _RadiusTwo.at(inteStep))
+                                          * (_EDensTwo.at(inteStep) + _EDensTwo.at(inteStep + 1));
                             }
 
                      // calculate the angle from the center of mass (real (0.0,0.0))
-                     y = m * (0.0 - (floatT) _JetStartX) + (floatT) _JetStartY;
-                     PhiTwo = atan((1500.0 - y) / (1500.0)) + PI;
-                     if(PhiTwo < 0.0) PhiTwo += 2.0 * PI;
+                     interCoordy = slope * (0 -  _JetStartX) + (floatT) _JetStartY;
+
+                     PhiTwo = std::abs(std::atan(
+                            (((floatT) _smearEnerDensGrid.getMaxSitesPerDirection() - 1.)/2. - interCoordy) /
+                            (((floatT) _smearEnerDensGrid.getMaxSitesPerDirection() - 1.)/2.)) + PI);
 
                      // store the values for the angle and the integral in an array
-                     _AngleSec2.at(i) = PhiTwo;
-                     _EDensSec2.at(i) = Integral;
+                     _AngleSec2.at(step) = PhiTwo;
+                     _EDensSec2.at(step) = Integral;
 
-                     // Calculation of ECCENTRICITY
-
-                     Alpha2 += _AngleStep;
+                     angleAlpha += _AngleStep;
                      }
               }
 
@@ -550,24 +506,43 @@ class IntegratedEnergyDensity{
                      floatT PhiThree = 0.0;
 
                      // alpha is the angle seen from the start point of the integration
-                     floatT Alpha3 = -PI / 4.0;
-                     for(int i = 0; i < Steps; i++) {
+                     floatT angleAlpha = -PI / 4.0;
+
+                     // interpolation coord
+                     floatT interCoordx_1, interCoordy_1;
+                     floatT interCoordx_2, interCoordy_2;
+                     floatT interCoordx;
+
+                     floatT distFromJetStart;
+
+                     floatT Integral;
+
+                     for(int step = 0; step < Steps; step++) {
+                            // set integral to 0 for += notation
+                            Integral = 0.0;
+
                             // calculate the slope from alpha
-                     	floatT m = std::tan(Alpha3);
-                     	floatT x1, x2, x, y1, y2;
+                     	floatT slope = std::tan(angleAlpha);
+
                             // point-slope form of equation for straight line x = m(y-y1)+x1
                             // calculate for each y value of the grid a value for x
-                     	for(int y = _JetStartY; y <= 3000; y++) {
-                     		floatT x = -m * ((floatT) y - (floatT) _JetStartY) + (floatT) _JetStartX;
+                     	for(int interCoordy = _JetStartY;
+                                    interCoordy < _smearEnerDensGrid.getMaxSitesPerDirection();
+                                    interCoordy++) {
+
+                                   floatT interCoordx = -slope * (interCoordy - _JetStartY)
+                                                        + (floatT) _JetStartX;
+
                                    // check wheather the point lies on the grid or not (needed for
                                    // integration which does not start at the origin (real (0.0,0.0))
-                     		if(x <= 3000.0 && x >= 0.0) {
+                     		if(interCoordx < _smearEnerDensGrid.getMaxSitesPerDirection()
+                                          && interCoordx >= 0.0) {
                                           // find the four gridpoints {(x1,y1),(x2,y1),(x1,y2),(x2,y2)}
                                           // for the interpolation around a point (x,y)
-                     			y1 = std::floor((floatT) y);
-                     			y2 = std::floor((floatT) y + 1.0);
-                     			x1 = std::floor(x);
-                     			x2 = std::floor(x + 1.0);
+                     			y1 = std::floor((floatT) interCoordy);
+                     			y2 = std::floor((floatT) interCoordy + 1.0);
+                     			x1 = std::floor(interCoordx);
+                     			x2 = std::floor(interCoordx + 1.0);
                                           // define the points where the energy density grid is read out
                                           Site siteP1((int) x1, (int) y1);
                                           Site siteP2((int) x1, (int) y2);
@@ -579,43 +554,45 @@ class IntegratedEnergyDensity{
                                                  _energDens.getSmearedEnergyDensData() -> getSite(siteP2),
                                                  _energDens.getSmearedEnergyDensData() -> getSite(siteP3),
                                                  _energDens.getSmearedEnergyDensData() -> getSite(siteP4),
-                                                 x1, x2, x, y1, y2, (floatT) y);
+                                                 x1, x2, interCoordx, y1, y2, (floatT) interCoordy);
                                           // calculate the distance from the jet origin
-                            		floatT r = std::hypot((((floatT) x - (floatT) _JetStartX) / 100.0),
-                                                        ((y - (floatT) _JetStartY) / 100.0));
+                            		distFromJetStart = std::hypot(
+                                                 ((interCoordx - (floatT) _JetStartX) / 100.0),
+                                                 (((floatT)interCoordy - (floatT) _JetStartY) / 100.0));
                                           // store point at line and the interpolated value at that point
-                     			_RadiusThree.at(y - _JetStartY) = r;
-                     			_EDensThree.at(y - _JetStartY) = Interpol;
+                     			_RadiusThree.at(interCoordy - _JetStartY) = distFromJetStart;
+                     			_EDensThree.at(interCoordy - _JetStartY) = Interpol;
                      		}
                      		else {
                                           // calculate the distance from the jet origin
-                            		floatT r = std::hypot((((floatT) x - (floatT) _JetStartX) / 100.0),
-                                                        ((y - (floatT) _JetStartY) / 100.0));
+                            		distFromJetStart = std::hypot(
+                                                 ((interCoordx - (floatT) _JetStartX) / 100.0),
+                                                 (((floatT)interCoordy - (floatT) _JetStartY) / 100.0));
                                           // store point at line and the interpolated value at that point
-                     			_RadiusThree.at(y - _JetStartY) = r;
-                     			_EDensThree.at(y - _JetStartY) = 0.0;
+                     			_RadiusThree.at(interCoordy - _JetStartY) = distFromJetStart;
+                     			_EDensThree.at(interCoordy - _JetStartY) = 0.0;
                      		}
                      	}
                             // perform a trapezoidal integration along the line
-                     	floatT Integral = 0.0;
-                     	for(int j = 0; j <= 3000 - _JetStartY; j++)
-                     	{
-                     		Integral += 0.5 * (_RadiusThree.at(j + 1) - _RadiusThree.at(j))
-                                          * (_EDensThree.at(j) + _EDensThree.at(j + 1));
+                     	for(int inteStep = 0; inteStep <= _smearEnerDensGrid.getMaxSitesPerDirection()
+                                   - _JetStartY; inteStep++) {
+                     		Integral += 0.5
+                                          * (_RadiusThree.at(inteStep + 1) - _RadiusThree.at(inteStep))
+                                          * (_EDensThree.at(inteStep) + _EDensThree.at(inteStep + 1));
                      	}
 
                      // calculate the angle from the center of mass (real (0.0,0.0))
-                     x = m * (3000.0 - (floatT) _JetStartY) + (floatT) _JetStartX;
-                     PhiThree = std::atan((x - 1500.0) / (1500.0)) + PI / 2.0;
-                     if(PhiThree < 0.0) PhiThree += 2.0 * PI;
+                     interCoordx = slope * (_smearEnerDensGrid.getMaxSitesPerDirection()
+                                   - _JetStartY) + (floatT) _JetStartX;
+                     PhiThree = std::abs(std::atan(
+                            (interCoordx - ((floatT) _smearEnerDensGrid.getMaxSitesPerDirection() - 1.)/2.) /
+                             (((floatT) _smearEnerDensGrid.getMaxSitesPerDirection() - 1.)/2.)) + PI / 2.0);
 
                      // store the values for the angle and the integral in an array
-                     _AngleSec3.at(i) = PhiThree;
-                     _EDensSec3.at(i) = Integral;
+                     _AngleSec3.at(step) = PhiThree;
+                     _EDensSec3.at(step) = Integral;
 
-                     // Calculation of ECCENTRICITY
-
-                     Alpha3 += _AngleStep;
+                     angleAlpha += _AngleStep;
                      }
               }
 
@@ -626,26 +603,41 @@ class IntegratedEnergyDensity{
                      floatT PhiFour = 0.0;
 
                      // alpha is the angle seen from the start point of the integration
-                     floatT Alpha4 = -PI / 4.0;
-                     for(int i = 0; i < Steps; i++)
-                     {
+                     floatT angleAlpha = -PI / 4.0;
+
+                     // interpolation coord
+                     floatT interCoordx_1, interCoordy_1;
+                     floatT interCoordx_2, interCoordy_2;
+                     floatT interCoordx;
+
+                     floatT distFromJetStart;
+
+                     floatT Integral;
+
+
+                     for(int step = 0; step < Steps; step++) {
+                            // set integral to 0 for += notation
+                            Integral = 0.0;
+
                             // calculate the slope from alpha
-                     	floatT m = std::tan(Alpha4);
-                     	floatT x1, x2, x, y1, y2;
-                     //point-slope form of equation for straight line x = m(y-y1)+x1
-                     //calculate for each y value of the grid a value for x
-                     	for(int y = _JetStartY; y >= 0; y--)
+                     	floatT slope = std::tan(angleAlpha);
+
+                            //point-slope form of equation for straight line x = m(y-y1)+x1
+                            //calculate for each y value of the grid a value for x
+                     	for(int interCoordy = _JetStartY; interCoordy >= 0; interCoordy--)
                      	{
-                     		floatT x = -m * ((floatT) y - (floatT) _JetStartY) + (floatT) _JetStartX;
+                     		floatT interCoordx = -slope * (interCoordy - _JetStartY)
+                                                        + (floatT) _JetStartX;
                                    // check wheather the point lies on the grid or not (needed for
                                    // integration which does not start at the origin (real (0.0,0.0))
-                     		if(x <= 3000.0 && x >= 0.0) {
+                     		if(interCoordx < _smearEnerDensGrid.getMaxSitesPerDirection()
+                                          && interCoordx >= 0.0) {
                                           // find the four gridpoints {(x1,y1),(x2,y1),(x1,y2),(x2,y2)}
                                           // for the interpolation around a point (x,y)
-                     			y1 = std::floor((floatT) y);
-                     			y2 = std::floor((floatT) y + 1.0);
-                     			x1 = std::floor(x);
-                     			x2 = std::floor(x + 1.0);
+                     			y1 = std::floor((floatT) interCoordy);
+                     			y2 = std::floor((floatT) interCoordy + 1.0);
+                     			x1 = std::floor(interCoordx);
+                     			x2 = std::floor(interCoordx + 1.0);
                                           // define the points where the energy density grid is read out
                                           Site siteP1((int) x1, (int) y1);
                                           Site siteP2((int) x1, (int) y2);
@@ -657,45 +649,46 @@ class IntegratedEnergyDensity{
                                                  _energDens.getSmearedEnergyDensData() -> getSite(siteP2),
                                                  _energDens.getSmearedEnergyDensData() -> getSite(siteP3),
                                                  _energDens.getSmearedEnergyDensData() -> getSite(siteP4),
-                                                 x1, x2, x, y1, y2, (floatT) y);
+                                                 x1, x2, interCoordx, y1, y2, (floatT) interCoordy);
                                           // calculate the distance from the jet origin
-                            		floatT r = std::hypot((((floatT) x - (floatT) _JetStartX) / 100.0),
-                                                        ((y - (floatT) _JetStartY) / 100.0));
+                            		distFromJetStart = std::hypot(
+                                                 ((interCoordx - (floatT) _JetStartX) / 100.0),
+                                                 (((floatT) interCoordy - (floatT) _JetStartY) / 100.0));
                                           // store point at line and the interpolated value at that point
 
-                     			_RadiusFour.at(_JetStartY - y) = r;
-                     			_EDensFour.at(_JetStartY - y) = Interpol;
+                     			_RadiusFour.at(_JetStartY - interCoordy) = distFromJetStart;
+                     			_EDensFour.at(_JetStartY - interCoordy) = Interpol;
                      		}
                      		else {
                                           // calculate the distance from the jet origin
-                            		floatT r = std::hypot((((floatT) x - (floatT) _JetStartX) / 100.0),
-                                                        ((y - (floatT) _JetStartY) / 100.0));
+                                          distFromJetStart = std::hypot(
+                                                 ((interCoordx - (floatT) _JetStartX) / 100.0),
+                                                 (((floatT) interCoordy - (floatT) _JetStartY) / 100.0));
                                           // store point at line and the interpolated value at that point
 
-                     			_RadiusFour.at(_JetStartY - y) = r;
-                     			_EDensFour.at(_JetStartY - y) = 0.0;
+                     			_RadiusFour.at(_JetStartY - interCoordy) = distFromJetStart;
+                     			_EDensFour.at(_JetStartY - interCoordy) = 0.0;
                      		}
                      	}
                             //perform a trapezoidal integration along the line
-                     	floatT Integral = 0.0;
-                     	for(int j = 0; j <= _JetStartY; j++)
+                     	for(int inteStep = 0; inteStep <= _JetStartY; inteStep++)
                      	{
-                     		Integral += 0.5 * (_RadiusFour.at(j + 1) - _RadiusFour.at(j))
-                                          * (_EDensFour.at(j) + _EDensFour.at(j + 1));
+                     		Integral += 0.5 * (_RadiusFour.at(inteStep + 1) - _RadiusFour.at(inteStep))
+                                          * (_EDensFour.at(inteStep) + _EDensFour.at(inteStep + 1));
                      	}
 
                      //calculate the angle from the center of mass (real (0.0,0.0))
-                     x = m * (0.0 - (floatT) _JetStartY) + (floatT) _JetStartX;
-                     PhiFour = std::atan((1500.0 - x) / (1500.0)) + (6.0 * PI) / 4.0;
-                     if(PhiFour < 0.0) PhiFour += 2.0 * PI;
+                     interCoordx = slope * (0 - _JetStartY) + (floatT) _JetStartX;
+                     PhiFour = std::abs(std::atan(
+                            (((floatT) _smearEnerDensGrid.getMaxSitesPerDirection() - 1.)/2. - interCoordx) /
+                            (((floatT) _smearEnerDensGrid.getMaxSitesPerDirection() - 1.)/2.))
+                            + (6.0 * PI) / 4.0);
 
                      // store the values for the angle and the integral in an array
-                     _AngleSec4.at(i) = PhiFour;
-                     _EDensSec4.at(i) = Integral;
+                     _AngleSec4.at(step) = PhiFour;
+                     _EDensSec4.at(step) = Integral;
 
-                     // Calculation of ECCENTRICITY
-
-                     Alpha4 += _AngleStep;
+                     angleAlpha += _AngleStep;
                      }
               }
 
@@ -772,12 +765,12 @@ class IntegratedEnergyDensity{
                      }
               }
 
-              void angles(int NEvents) {
+              void angles() {
                      for (int i = 0; i < Steps; i++) {
-                            _Angle.at(i) = _AverageEDens1.at(i) / NEvents;
-                            _Angle.at(Steps + i) = _AverageEDens2.at(i) / NEvents;
-                            _Angle.at(2 * Steps + i) = _AverageEDens3.at(i) / NEvents;
-                            _Angle.at(3 * Steps + i) = _AverageEDens4.at(i) / NEvents;
+                            _Angle.at(i) = _AngleSec1.at(i);
+                            _Angle.at(Steps + i) = _AngleSec2.at(i);
+                            _Angle.at(2 * Steps + i) = _AngleSec3.at(i);
+                            _Angle.at(3 * Steps + i) = _AngleSec4.at(i);
                      }
               }
 
@@ -1157,14 +1150,7 @@ void computeTest(){
 
        IntegratedEnergyDensity<PREC> intEnergDens(startSite, energDens);
 
-       intEnergDens.sector1();
-       intEnergDens.sector2();
-       intEnergDens.sector3();
-       intEnergDens.sector4();
 
-       intEnergDens.averagedIntegral();
-       intEnergDens.angles(NEvents);
-       intEnergDens.integrals(NEvents);
 
        file.writeFileVector(intEnergDens.getIntegrationEDensValAngles(), "Angle.dat");
        file.writeFileVector(intEnergDens.getIntegrationEDensValIntegrals(), "IntegratedEnergyDensity.dat");
