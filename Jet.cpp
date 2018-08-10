@@ -640,9 +640,9 @@ class IntegratedEnergyDensity{
                      for(int j = 0; j < Steps; j++)
                      {
                      	_AverageEDens1.at(j) += _EDensSec1.at(j) / IntegralNormalization;
-                     	_AverageEDens1.at(j) += _EDensSec2.at(j) / IntegralNormalization;
-                     	_AverageEDens1.at(j) += _EDensSec3.at(j) / IntegralNormalization;
-                     	_AverageEDens1.at(j) += _EDensSec4.at(j) / IntegralNormalization;
+                     	_AverageEDens2.at(j) += _EDensSec2.at(j) / IntegralNormalization;
+                     	_AverageEDens3.at(j) += _EDensSec3.at(j) / IntegralNormalization;
+                     	_AverageEDens4.at(j) += _EDensSec4.at(j) / IntegralNormalization;
                      }
               }
 
