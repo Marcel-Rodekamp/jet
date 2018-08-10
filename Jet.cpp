@@ -402,10 +402,10 @@ class IntegratedEnergyDensity{
                                           Site siteP4((int) x2, (int) y2);
 
                      			floatT Interpol = energyDensityInterpolation(
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP1),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP2),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP3),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP4),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP1),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP2),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP3),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP4),
                                                  x1, x2, (floatT) x, y1, y2, y);
                                           // calculate the distance from the jet origin
                      			floatT r = std::hypot((((floatT) x - (floatT) _JetStartX) / 100.0),
@@ -478,10 +478,10 @@ class IntegratedEnergyDensity{
                                           Site siteP4((int) x2, (int) y2);
 
                                           floatT Interpol = energyDensityInterpolation(
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP1),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP2),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP3),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP4),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP1),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP2),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP3),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP4),
                                                  x1, x2, (floatT) x, y1, y2, y);
                                           // calculate the distance from the jet origin
                      			floatT r = std::hypot((((floatT) x - (floatT) _JetStartX) / 100.0),
@@ -555,10 +555,10 @@ class IntegratedEnergyDensity{
                                           Site siteP4((int) x2, (int) y2);
 
                                           floatT Interpol = energyDensityInterpolation(
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP1),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP2),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP3),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP4),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP1),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP2),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP3),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP4),
                                                  x1, x2, x, y1, y2, (floatT) y);
                                           // calculate the distance from the jet origin
                             		floatT r = std::hypot((((floatT) x - (floatT) _JetStartX) / 100.0),
@@ -633,10 +633,10 @@ class IntegratedEnergyDensity{
                                           Site siteP4((int) x2, (int) y2);
 
                                           floatT Interpol = energyDensityInterpolation(
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP1),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP2),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP3),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP4),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP1),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP2),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP3),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP4),
                                                  x1, x2, x, y1, y2, (floatT) y);
                                           // calculate the distance from the jet origin
                             		floatT r = std::hypot((((floatT) x - (floatT) _JetStartX) / 100.0),
@@ -1057,4 +1057,15 @@ void computeTest(){
        energDens.smearedEnergyDensity();
 
        file.writeFileGrid(energDens.getSmearedEnergyDensData());
+
+       std::cout << "Compute integrations in all directions" << '\n';
+
+       IntegratedEnergyDensity<PREC> intEnergDens(Site(0, 0), energDens);
+
+       intEnergDens.sector1();
+       intEnergDens.sector2();
+       intEnergDens.sector3();
+       intEnergDens.sector4();
+
+       intEnergDens.averagedIntegral();
 }
