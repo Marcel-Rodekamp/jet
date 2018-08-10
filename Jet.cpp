@@ -10,8 +10,13 @@
 #define PI 3.14159265358979323846
 #define Steps 500
 
-struct Site;
+class Site;
 template<class floatT> class Grid;
+template<class floatT> class FileWriter;
+template<class floatT> class EnergyDensity;
+template<class floatT> class IntegratedEnergyDensity;
+template<class floatT> class Eccentricity;
+template<class floatT> class FlowCoefficients;
 
 void indexerTest(int max);
 void runThroughGridTest(int max);
@@ -136,7 +141,8 @@ class FileWriter{
               std::string _filename;
        public:
               // constructor
-              FileWriter(int newNEvents, int newNNucleonsCore, std::string newFilename) : _NEvents(newNEvents),
+              FileWriter(int newNEvents, int newNNucleonsCore, std::string newFilename) :
+                                                        _NEvents(newNEvents),
                                                         _NNucleonsCore(newNNucleonsCore),
                                                         _filename(newFilename) {}
 
@@ -285,6 +291,8 @@ class EnergyDensity{
                      return & _gridSmeared;
               }
 
+              friend class IntegratedEnergyDensity<floatT>;
+
 };
 
 template<class floatT>
@@ -298,8 +306,6 @@ class IntegratedEnergyDensity{
 
               // angle steps for radial integration
               floatT _AngleStep;
-
-              EnergyDensity<floatT> & _energDens;
 
               // vectors for the calculated angle and integrated energy density
               std::vector<floatT> _AngleSec1;
@@ -326,6 +332,11 @@ class IntegratedEnergyDensity{
               std::vector<floatT> _RadiusFour;
               std::vector<floatT> _EDensFour;
 
+              std::vector<floatT> _Angle;
+              std::vector<floatT> _Integral;
+
+              EnergyDensity<floatT> & _energDens;
+
        public:
               // constructor
               IntegratedEnergyDensity(Site startSite, EnergyDensity<floatT> & newEnergDens):
@@ -334,15 +345,14 @@ class IntegratedEnergyDensity{
                                                         _JetStartX((int) ((startSite.x() + 15. ) * 100.) ),
                                                         _JetStartY((int) ((startSite.y() + 15. ) * 100.) ),
                                                         _AngleStep((PI / 2.0) / ((floatT) Steps)),
-                                                        _energDens(newEnergDens),
                                                         _AngleSec1(Steps),
                                                         _EDensSec1(Steps),
                                                         _AngleSec2(Steps),
                                                         _EDensSec2(Steps),
                                                         _AngleSec3(Steps),
                                                         _EDensSec3(Steps),
-                                                        _AngleSec3(Steps),
-                                                        _EDensSec3(Steps),
+                                                        _AngleSec4(Steps),
+                                                        _EDensSec4(Steps),
                                                         _AverageEDens1(Steps),
                                                         _AverageEDens2(Steps),
                                                         _AverageEDens3(Steps),
@@ -354,7 +364,10 @@ class IntegratedEnergyDensity{
                                                         _RadiusThree(3000 - (int) ((startSite.y() + 15. ) * 100.)),
                                                         _EDensThree(3000 - (int) ((startSite.y() + 15. ) * 100.)),
                                                         _RadiusFour((int) ((startSite.y() + 15. ) * 100.)),
-                                                        _EDensFour((int) ((startSite.y() + 15. ) * 100.)) {}
+                                                        _EDensFour((int) ((startSite.y() + 15. ) * 100.)),
+                                                        _Angle(4 * Steps),
+                                                        _Integral(4 * Steps),
+                                                        _energDens(newEnergDens) {}
 
 
               // bilinear interpolation function between the grid points in the energy density grid
@@ -402,10 +415,10 @@ class IntegratedEnergyDensity{
                                           Site siteP4((int) x2, (int) y2);
 
                      			floatT Interpol = energyDensityInterpolation(
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP1),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP2),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP3),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP4),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP1),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP2),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP3),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP4),
                                                  x1, x2, (floatT) x, y1, y2, y);
                                           // calculate the distance from the jet origin
                      			floatT r = std::hypot((((floatT) x - (floatT) _JetStartX) / 100.0),
@@ -478,10 +491,10 @@ class IntegratedEnergyDensity{
                                           Site siteP4((int) x2, (int) y2);
 
                                           floatT Interpol = energyDensityInterpolation(
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP1),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP2),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP3),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP4),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP1),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP2),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP3),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP4),
                                                  x1, x2, (floatT) x, y1, y2, y);
                                           // calculate the distance from the jet origin
                      			floatT r = std::hypot((((floatT) x - (floatT) _JetStartX) / 100.0),
@@ -555,10 +568,10 @@ class IntegratedEnergyDensity{
                                           Site siteP4((int) x2, (int) y2);
 
                                           floatT Interpol = energyDensityInterpolation(
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP1),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP2),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP3),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP4),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP1),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP2),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP3),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP4),
                                                  x1, x2, x, y1, y2, (floatT) y);
                                           // calculate the distance from the jet origin
                             		floatT r = std::hypot((((floatT) x - (floatT) _JetStartX) / 100.0),
@@ -633,10 +646,10 @@ class IntegratedEnergyDensity{
                                           Site siteP4((int) x2, (int) y2);
 
                                           floatT Interpol = energyDensityInterpolation(
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP1),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP2),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP3),
-                                                 _energDens.getSmearedEnergyDensData().getSite(siteP4),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP1),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP2),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP3),
+                                                 _energDens.getSmearedEnergyDensData() -> getSite(siteP4),
                                                  x1, x2, x, y1, y2, (floatT) y);
                                           // calculate the distance from the jet origin
                             		floatT r = std::hypot((((floatT) x - (floatT) _JetStartX) / 100.0),
@@ -703,8 +716,34 @@ class IntegratedEnergyDensity{
                      }
               }
 
-              friend class Eccentricity;
-              friend class FlowCoefficients;
+              void angles(int NEvents) {
+                     for (int i = 0; i < Steps; i++) {
+                            _Angle.at(i) = _AverageEDens1.at(i) / NEvents;
+                            _Angle.at(Steps + i) = _AverageEDens2.at(i) / NEvents;
+                            _Angle.at(2 * Steps + i) = _AverageEDens3.at(i) / NEvents;
+                            _Angle.at(3 * Steps + i) = _AverageEDens4.at(i) / NEvents;
+                     }
+              }
+
+              void integrals(int NEvents) {
+                     for (int i = 0; i < Steps; i++) {
+                            _Integral.at(i) = _AverageEDens1.at(i) / NEvents;
+                            _Integral.at(Steps + i) = _AverageEDens2.at(i) / NEvents;
+                            _Integral.at(2 * Steps + i) = _AverageEDens3.at(i) / NEvents;
+                            _Integral.at(3 * Steps + i) = _AverageEDens4.at(i) / NEvents;
+                     }
+              }
+
+              std::vector<floatT> * getIntegrationEDensValAngles() {
+                     return & _Angle;
+              }
+
+              std::vector<floatT> * getIntegrationEDensValIntegrals() {
+                     return & _Integral;
+              }
+
+              friend class Eccentricity<floatT>;
+              friend class FlowCoefficients<floatT>;
 };
 
 template<class floatT>
@@ -777,6 +816,43 @@ class Eccentricity{
               // calculate the eccentricity e2 ... e5 for one event and store the value in the array
               void computeEccentricity(){
                      _computeEcc();
+              }
+
+              void eccentricitySector4() {
+                     //define the imaginary I.
+                     const std::complex<floatT> I(0.0,1.0);
+                     // perform a trapezoidal integration to calculate the eccentricity e2 ... e5
+                     for (int i = 0; i < Steps; i++) {
+                            for(int n =  2; n <= 5; n++) {
+                                   for(int j = 0; j < 3000 - _intEnergDens._JetStartX; j++) {
+                                          _EccCounter4.at(n - 2) += (_intEnergDens._RadiusFour.at(j + 1)
+                                                 - _intEnergDens._RadiusFour.at(j)) * 0.5
+                                                 * (_intEnergDens._EDensFour.at(j)
+                                                 * std::pow(_intEnergDens._RadiusFour.at(j),(n + 1))
+                                                 + _intEnergDens._EDensFour.at(j + 1)
+                                                 * std::pow(_intEnergDens._RadiusFour.at(j + 1),(n + 1)))
+                                                 * exp(I * ((floatT) n * _intEnergDens._AngleSec4.at(i)));
+
+                                          _EccDenom4.at(n - 2) += (_intEnergDens._RadiusFour.at(j + 1)
+                                                 - _intEnergDens._RadiusFour.at(j)) * 0.5
+                                                 * (_intEnergDens._EDensFour.at(j)
+                                                 * std::pow(_intEnergDens._RadiusFour.at(j),(n + 1))
+                                                 + _intEnergDens._EDensFour.at(j + 1)
+                                                 * std::pow(_intEnergDens._RadiusFour.at(j + 1),(n + 1)));
+                                   }
+                            }
+                     }
+              }
+
+              void eventEccentricity() {
+                     //calculate the eccentricity e2 ... e5 for one event and store the value in the array
+                     for(int n = 0; n < 4; n++){
+                                  _EventEccentricity.at(n) = std::abs(
+                                          -(_EccCounter1.at(n) + _EccCounter2.at(n)
+                                          + _EccCounter3.at(n) + _EccCounter4.at(n))
+                                          / (_EccDenom1.at(n) + _EccDenom2.at(n)
+                                          + _EccDenom3.at(n) + _EccDenom4.at(n)));
+                     }
               }
 
               std::vector<floatT> * getEccenetricityData(){
@@ -971,7 +1047,7 @@ void computeTest(){
 
        std::string filename = "Pb67.6.txt";
 
-       FileWriter<PREC> file(NEvents,NNucleonsCore, filename);
+       FileWriter<PREC> file(NEvents, NNucleonsCore, filename);
 
        file.readFile(rawDataGrid);
 
@@ -984,4 +1060,32 @@ void computeTest(){
        energDens.smearedEnergyDensity();
 
        file.writeFileGrid(energDens.getSmearedEnergyDensData());
+
+       std::cout << "Compute integrations in all directions" << '\n';
+
+       Site startSite(0,0);
+
+       IntegratedEnergyDensity<PREC> intEnergDens(startSite, energDens);
+
+       intEnergDens.sector1();
+       intEnergDens.sector2();
+       intEnergDens.sector3();
+       intEnergDens.sector4();
+
+       intEnergDens.averagedIntegral();
+       intEnergDens.angles(NEvents);
+       intEnergDens.integrals(NEvents);
+
+       file.writeFileVector(intEnergDens.getIntegrationEDensValAngles(), "Angle.dat");
+       file.writeFileVector(intEnergDens.getIntegrationEDensValIntegrals(), "IntegratedEnergyDensity.dat");
+
+/*       Eccentricity<PREC> ecc(intEnergDens);
+
+       ecc.eccentricitySector1();
+       ecc.eccentricitySector2();
+       ecc.eccentricitySector3();
+       ecc.eccentricitySector4();
+       ecc.eventEccentricity();
+
+       file.writeFileVector(, "Eccentricity.dat");*/
 }
