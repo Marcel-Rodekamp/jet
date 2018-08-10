@@ -9,20 +9,55 @@
 #define PREC double
 
 struct Site;
-template<class floatT> class GridAccessor;
 template<class floatT> class Grid;
 
 void indexerTest(int max);
+void runThroughGridTest(int max);
+void computeTest();
 
 // structure to define the lattice points leaving out the z component due to the contemplated event plane
-struct Site{
-       std::vector<int> VCoordinates;
+class Site{
+       private:
+              std::vector<int> VCoordinates;
 
-       // constructor
-       Site(int x, int y){
-              VCoordinates.push_back(x);
-              VCoordinates.push_back(y);
-       }
+       public:
+              // constructor
+              Site(int x, int y){
+                     VCoordinates.push_back(x);
+                     VCoordinates.push_back(y);
+              }
+
+              int inline x(){
+                     return VCoordinates.at(0);
+              }
+
+              int inline y(){
+                     return VCoordinates.at(1);
+              }
+
+              void inline xUp(){
+                     VCoordinates.at(0) += 1;
+              }
+
+              void inline yUp(){
+                     VCoordinates.at(1) += 1;
+              }
+
+              void inline xDown(){
+                     VCoordinates.at(0) -= 1;
+              }
+
+              void inline yDown(){
+                     VCoordinates.at(1) -= 1;
+              }
+
+              void inline setX(int newX){
+                     VCoordinates.at(0) = newX;
+              }
+
+              void inline setY(int newY){
+                     VCoordinates.at(1) = newY;
+              }
 
 };
 
@@ -43,25 +78,51 @@ class Grid{
                                           + 1 ) ,
                                    _maxSitesPerDirection(maxSitesPerDirection) {}
 
-              int getIndex(Site site){
-                     int max = _maxSitesPerDirection;
-                     return site.VCoordinates[0] + site.VCoordinates[1] + site.VCoordinates[1]*max;
+              int inline getIndex(Site site){
+                     return site.x() + site.y() + site.y() * _maxSitesPerDirection;
               }
 
-              void setSite(Site site, floatT value){
+              void inline setSite(Site site, floatT value){
                      _VData.at(getIndex(site)) = value;
               }
 
-              floatT getSite(Site site){
+              floatT inline getSite(Site site){
                      return _VData.at(getIndex(site));
               }
 
-              void addSite(Site site, floatT value){
+              void inline addSite(Site site, floatT value){
                      _VData.at(getIndex(site)) += value;
               }
 
-              int getMaxSitesPerDirection(){
+              int inline getMaxSitesPerDirection(){
                      return _maxSitesPerDirection;
+              }
+
+              // run through the whole grid
+              bool runThroughGrid(Site & site){
+                     // compute possible new x value
+                     int newCoordX = site.x() + 1;
+
+                     // check if the x value is on the grid
+                     if(newCoordX <= _maxSitesPerDirection){
+                            site.xUp();
+                     }
+                     else{
+                            // if the x value is not on the grid compute possible new y value
+                            int newCoordY = site.y() + 1;
+
+                            // check if the y value is on  the grid
+                            if(newCoordY < _maxSitesPerDirection){
+                                   site.yUp();
+                                   site.setX(0);
+                            }
+                            else{
+                                   // end the loop over the grid
+                                   return false;
+                            }
+                     }
+
+                     return true;
               }
 };
 
@@ -152,23 +213,40 @@ class EnergyDensity{
                                                          // from cross section to radius in fm.
                                                          // the factor 100 is necessary due to the grid size
 
-
-
               // calculate energy density in MeV from NColl
               // (15.0 -> C. Schmidt, 800.0 -> Dinner N. Borghini & ???)
               void energyDensity(Grid<floatT> & grid){
-
                      floatT EDens = 0;
+                     Site site(0,0);
+                     int NColl;
 
-                     for (int y = 0; y < _grid.getMaxSitesPerDirection(); y++) {
-                            for (int x = 0; x < _grid.getMaxSitesPerDirection(); x++) {
-                                   Site site(x,y);
-                                   int NColl = (int) grid.getSite(site);
+                     while(_grid.runThroughGrid(site)){
+                            NColl = (int) grid.getSite(site);
 
-                                   // 15 * 800 * NColl^4 / 46^4
-              	              EDens = 0.002680093338717343 * NColl * NColl * NColl * NColl;
+                            // (15*800/46^4) * NColl^4
+                            EDens = 0.002680093338717343 * NColl * NColl * NColl * NColl;
 
-                                   _grid.setSite(site,EDens);
+                            _grid.setSite(site,EDens);
+                     }
+              }
+
+              void smearedEnergyDensity(){
+                     Site site(0, 0);
+                     Site tmpSite(0,0);
+                     const int tmpRadNucleon = (int) _RadNucleon;
+
+                     while(_grid.runThroughGrid(site)){
+                            if (_grid.getSite(site) != 0 ) {
+
+                                   // loop through a square with side length tmpRadNucleon centered on the
+                                   // not zero site
+                                   for(int x = site.x() - tmpRadNucleon; x < site.x() + tmpRadNucleon; x++){
+                                   for(int y = site.y() - tmpRadNucleon; y < site.y() + tmpRadNucleon; y++){
+                                          tmpSite.setX(x);
+                                          tmpSite.setY(y);
+                                          _gridSmeared.addSite(tmpSite,_grid.getSite(site));
+                                   }
+                                   }
                             }
                      }
               }
@@ -176,83 +254,19 @@ class EnergyDensity{
               Grid<floatT> * getSmearedEnergyDensData(){
                      return & _gridSmeared;
               }
-
-              void smearedEnergyDensity(){
-                     for (int y = 0; y < _grid.getMaxSitesPerDirection(); y++) {
-                            for (int x = 0; x < _grid.getMaxSitesPerDirection(); x++) {
-                                   Site site(x, y);
-                                   if (_grid.getSite(site) != 0 ) {
-                                          for (int ynew = y - (int) _RadNucleon; ynew <= y + (int) _RadNucleon; ynew++) {
-                                                 for (int xnew = x - (int) _RadNucleon; xnew <= x + (int) _RadNucleon; xnew++) {
-                                                               Site siteNew(xnew,ynew);
-                                                               _gridSmeared.addSite(siteNew,_grid.getSite(site));
-                                                 }
-                                          }
-                                   }
-                            }
-                     }
-              }
 };
-
 
 int main(int argc, char const *argv[]) {
        std::clock_t start;
-       double duration;
-
-       // number of events
-       int NEvents;
-
-       std::cout << "Number of events: \n";
-
-       std::cin >> NEvents;
-
-       // number of nucleons in the core of the element, e.g. 208 for Pb
-       int NNucleonsCore;
-
-       std::cout << "Number of nucleons per core: \n";
-
-       std::cin >> NNucleonsCore;
-
-       // nucleon nucleon cross section for nucleon radius
-       PREC NNCross;
-
-       std::cout << "Nucleon Nucleon cross section in mb: \n";
-
-       std::cin >> NNCross;
 
        start = std::clock();
 
-       int elems = 3001;
 
-       std::cout << "Initializing the data grid" << '\n';
+       // runThroughGridTest(3);
 
-       Grid<PREC> rawDataGrid(elems);
+       computeTest();
 
-       std::cout << "Initializing the energy density computation" << '\n';
-
-       EnergyDensity<PREC> energDens(NNCross, rawDataGrid.getMaxSitesPerDirection());
-
-       std::cout << "Read data " << '\n';
-
-       std::string filename = "Pb67.6.txt";
-
-       FileWriter<PREC> file(NEvents,NNucleonsCore, filename);
-
-       file.readFile(rawDataGrid);
-
-       std::cout << "Compute energy density" << '\n';
-
-       energDens.energyDensity(rawDataGrid);
-
-       std::cout << "Smear energy density" << '\n';
-
-       energDens.smearedEnergyDensity();
-
-       file.writeFileEDens(energDens.getSmearedEnergyDensData());
-
-       duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-
-       std::cout<< duration <<'\n';
+       std::cout << ( std::clock() - start ) / (double) CLOCKS_PER_SEC << "s" << '\n';
 
        return 0;
 }
@@ -288,4 +302,81 @@ void indexerTest(int max){
               }
        }
 
+}
+
+//Test runThroughGrid()
+
+void runThroughGridTest(int max){
+       Grid<PREC> grid(max);
+
+       std::cout << "runThroughGrid(Site)" << '\n';
+
+       Site site(0,0);
+       int vectorIndex = 0;
+       std::cout << "now at (x,y): (" << site.x() << "," << site.y() << ")" << '\n';
+       while(grid.runThroughGrid(site)){
+              std::cout << "now at (x,y): (" << site.x() << "," << site.y() << ")" << '\n';
+       }
+
+       std::cout << "\nloop through lattice\n" << '\n';
+
+       for (size_t y = 0; y <= max; y++) {
+              for (size_t x = 0; x <= max; x++){
+                     Site si(x,y);
+                     std::cout << "now at (x,y): (" << si.x() << "," << si.y() << ")" << '\n';
+              }
+       }
+}
+
+// Test Energy Density computation and runtime
+
+void computeTest(){
+       // number of events
+       int NEvents = 1;
+
+       // std::cout << "Number of events: \n";
+
+       // std::cin >> NEvents;
+
+       // number of nucleons in the core of the element, e.g. 208 for Pb
+       int NNucleonsCore = 208;
+
+       // std::cout << "Number of nucleons per core: \n";
+
+       // std::cin >> NNucleonsCore;
+
+       // nucleon nucleon cross section for nucleon radius
+       PREC NNCross = 67.6;
+
+       // std::cout << "Nucleon Nucleon cross section in mb: \n";
+
+       // std::cin >> NNCross;
+
+       int elems = 3001;
+
+       std::cout << "Initializing the data grid" << '\n';
+
+       Grid<PREC> rawDataGrid(elems);
+
+       std::cout << "Initializing the energy density computation" << '\n';
+
+       EnergyDensity<PREC> energDens(NNCross, rawDataGrid.getMaxSitesPerDirection());
+
+       std::cout << "Read data " << '\n';
+
+       std::string filename = "Pb67.6.txt";
+
+       FileWriter<PREC> file(NEvents,NNucleonsCore, filename);
+
+       file.readFile(rawDataGrid);
+
+       std::cout << "Compute energy density" << '\n';
+
+       energDens.energyDensity(rawDataGrid);
+
+       std::cout << "Smear energy density" << '\n';
+
+       energDens.smearedEnergyDensity();
+
+       file.writeFileEDens(energDens.getSmearedEnergyDensData());
 }
