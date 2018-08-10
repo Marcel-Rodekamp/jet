@@ -281,6 +281,8 @@ class IntegratedEnergyDensity{
               std::vector<floatT> _AngleSec4;
               std::vector<floatT> _EDensSec4;
 
+              std::vector<floatT> _Integral;
+
               // vectors for the averaged energy density
               std::vector<floatT> _AverageEDens1;
               std::vector<floatT> _AverageEDens2;
@@ -331,26 +333,28 @@ class IntegratedEnergyDensity{
                                    // check wheather the point lies on the grid or not (needed for
                                    // integration which does not start at the origin (real (0.0,0.0))
 
-                     		if(y < _smearEnerDensGrid.getMaxSitesPerDirection() && y >= 0.0) {
+                     		if(interCoordy < _smearEnerDensGrid.getMaxSitesPerDirection()
+                                                 && interCoordy >= 0.0) {
                                           // find the four gridpoints {(x1,y1),(x2,y1),(x1,y2),(x2,y2)}
                                           // for the interpolation around a point (x,y)
-                     			interCoordx_1 = std::floor((floatT) interCoordx);
-                     			interCoordx_2 = std::floor((floatT) interCoordx + 1.0);
-                     			interCoordy_1 = std::floor(interCoordy);
-                     			interCoordy_2 = std::floor(interCoordy + 1.0);
+                     			interCoordx_1 = (int) std::floor((floatT) interCoordx);
+                     			interCoordx_2 = (int) std::floor((floatT) interCoordx + 1.0);
+                     			interCoordy_1 = (int) std::floor(interCoordy);
+                     			interCoordy_2 = (int) std::floor(interCoordy + 1.0);
 
                                           // define the points where the energy density grid is read out
-                     			Site siteP1((int) interCoordx_1, (int) interCoordy_1);
-                                          Site siteP2((int) interCoordx_1, (int) interCoordy_2);
-                                          Site siteP3((int) interCoordx_2, (int) interCoordy_1);
-                                          Site siteP4((int) interCoordx_2, (int) interCoordy_2);
+                     			Site siteP1(interCoordx_1, interCoordy_1);
+                                          Site siteP2(interCoordx_1, interCoordy_2);
+                                          Site siteP3(interCoordx_2, interCoordy_1);
+                                          Site siteP4(interCoordx_2, interCoordy_2);
+                                          Site siteP(interCoordx, interCoordy);
 
-                     			floatT Interpol = energyDensityInterpolation(interCoordx_1,
-                                                                                       interCoordx_2,
-                                                                                       (floatT) interCoordx,
-                                                                                       interCoordy_1,
-                                                                                       interCoordy_2,
-                                                                                       interCoordy);
+                     			floatT Interpol = _energyDensityInterpolation(
+                                                 siteP1,
+                                                 siteP2,
+                                                 siteP3,
+                                                 siteP4,
+                                                 siteP);
 
                                           // calculate the distance from the jet origin
                      			distFromJetStart = std::hypot(
@@ -630,6 +634,64 @@ class IntegratedEnergyDensity{
                      }
               }
 
+              void _normalizeIntegral() {
+                     floatT IntegralNormalization = _integralNormalization();
+                     // divide each integral by the normalization and the number of events
+                     for(int j = 0; j < Steps; j++){
+                            _AverageEDens1.at(j) += _EDensSec1.at(j) / IntegralNormalization;
+                            _AverageEDens2.at(j) += _EDensSec2.at(j) / IntegralNormalization;
+                            _AverageEDens3.at(j) += _EDensSec3.at(j) / IntegralNormalization;
+                            _AverageEDens4.at(j) += _EDensSec4.at(j) / IntegralNormalization;
+                     }
+              }
+
+              void _angles() {
+                     for (int i = 0; i < Steps; i++) {
+                            _AngleSec1.push_back(_AngleSec2.at(i));
+                            _AngleSec1.push_back(_AngleSec3.at(i));
+                            _AngleSec1.push_back(_AngleSec4.at(i));
+                     }
+              }
+
+              // bilinear interpolation function between the grid points in the energy density grid
+              floatT inline _energyDensityInterpolation(
+                                   Site intSiteLowerLeftCor,
+                                   Site intSiteUpperLeftCor,
+                                   Site intSiteLowerRightCor,
+                                   Site intSiteUpperRightCor,
+                                   Site intSite){
+
+                     // compute distances between points of the square
+                     floatT x2x = intSiteLowerRightCor.x() - intSite.x();
+                     floatT x2x1 = intSiteLowerRightCor.x() - intSiteLowerLeftCor.x();
+                     floatT xx1 = intSite.x() - intSiteLowerLeftCor.x();
+                     floatT y2y = intSiteUpperRightCor.y() - intSite.y();
+                     floatT y2y1 = intSiteUpperRightCor.y() - intSiteLowerRightCor.y();
+                     floatT yy1 = intSite.y() - intSiteLowerRightCor.y();
+
+                     // compute the interpolation value and return it
+                     return  (intSiteLowerLeftCor * x2x * y2y
+                                   + intSiteLowerRightCor * xx1 * y2y
+                                   + intSiteUpperLeftCor * x2x * yy1
+                                   + intSiteUpperRightCor * xx1 * yy1)
+                                   /(x2x1 * y2y1);
+              }
+
+              floatT inline _integralNormalization() {
+                     // normalization of the integral by summing the value of the integrals
+                     // for all angles phi of one event
+                     floatT IntegralNormalization = 0.;
+
+                     for(int i = 0; i < Steps; i++){
+                            IntegralNormalization += (  _EDensSec1.at(i)
+                                                     + _EDensSec2.at(i)
+                                                     + _EDensSec3.at(i)
+                                                     + _EDensSec4.at(i));
+                     }
+
+                     return IntegralNormalization;
+              }
+
        public:
               // constructor
               IntegratedEnergyDensity(Site startSite, EnergyDensity<floatT> & newEnergDens):
@@ -638,7 +700,7 @@ class IntegratedEnergyDensity{
                                                         _JetStartX((int) ((startSite.x() + 15. ) * 100.) ),
                                                         _JetStartY((int) ((startSite.y() + 15. ) * 100.) ),
                                                         _AngleStep((PI / 2.0) / (Steps)),
-                                                        _energDens(newEnergDens),
+                                                        _smearEnerDensGrid(newEnergDens),
                                                         _AngleSec1(Steps),
                                                         _EDensSec1(Steps),
                                                         _AngleSec2(Steps),
@@ -647,6 +709,7 @@ class IntegratedEnergyDensity{
                                                         _EDensSec3(Steps),
                                                         _AngleSec3(Steps),
                                                         _EDensSec3(Steps),
+                                                        _Integral(4*Steps),
                                                         _AverageEDens1(Steps),
                                                         _AverageEDens2(Steps),
                                                         _AverageEDens3(Steps),
@@ -660,48 +723,37 @@ class IntegratedEnergyDensity{
                                                         _RadiusFour((int) ((startSite.y() + 15. ) * 100.)),
                                                         _EDensFour((int) ((startSite.y() + 15. ) * 100.)) {}
 
+       void computeIntegratedEnergyDensity(){
+              // compute the integrated energy density in each sector
+              _sector1();
+              _sector2();
+              _sector3();
+              _sector4();
 
-              // bilinear interpolation function between the grid points in the energy density grid
-              floatT energyDensityInterpolation(
-                                   floatT fP11,
-                                   floatT fP12,
-                                   floatT fP21,
-                                   floatT fP22,
-                                          floatT x1, floatT x2, floatT x, floatT y1, floatT y2, floatT y){
-              	floatT x2x, x2x1, xx1, y2y, y2y1, yy1, interpolationValue;
-              	x2x = x2 - x;
-              	x2x1 = x2 - x1;
-              	xx1 = x - x1;
-              	y2y = y2 - y;
-              	y2y1 = y2 - y1;
-              	yy1 = y - y1;
-              	return interpolationValue = (1.0 / (x2x1 * y2y1)) * (fP11 * x2x * y2y + fP21 * xx1 * y2y
-                                                 + fP12 * x2x * yy1 + fP22 * xx1 * yy1);
-              }
+              // normalize and merge the integral
+              _normalizeIntegral();
 
-                            floatT inline integralNormalization() {
-                     // normalization of the integral by summing the value of the integrals
-                     // for all angles phi of one event
-                     floatT IntegralNormalization = 0.0;
-                     for(int i = 0; i < Steps; i++)
-                     {
-                     	IntegralNormalization += (_EDensSec1.at(i) + _EDensSec2.at(i)
-                                                 + _EDensSec3.at(i) + _EDensSec4.at(i));
-                     }
-                     return IntegralNormalization;
-              }
+              // put computed angles of each sector in one output vector
+              _angles();
+       }
 
-              void averagedIntegral() {
-                     floatT IntegralNormalization = integralNormalization();
-                     // divide each integral by the normalization and the number of events
-                     for(int j = 0; j < Steps; j++)
-                     {
-                     	_AverageEDens1.at(j) += _EDensSec1.at(j) / IntegralNormalization;
-                     	_AverageEDens2.at(j) += _EDensSec2.at(j) / IntegralNormalization;
-                     	_AverageEDens3.at(j) += _EDensSec3.at(j) / IntegralNormalization;
-                     	_AverageEDens4.at(j) += _EDensSec4.at(j) / IntegralNormalization;
-                     }
+       void averageIntegralsOverAllEvents(int NEvents) {
+              for (int i = 0; i < Steps; i++) {
+                     _Integral.at(i) = _AverageEDens1.at(i) / NEvents;
+                     _Integral.at(Steps + i) = _AverageEDens2.at(i) / NEvents;
+                     _Integral.at(2 * Steps + i) = _AverageEDens3.at(i) / NEvents;
+                     _Integral.at(3 * Steps + i) = _AverageEDens4.at(i) / NEvents;
               }
+       }
+
+       std::vector<floatT> * getIntegrationEDensValAngles() {
+              return & _AngleSec1;
+       }
+
+       std::vector<floatT> * getIntegrationEDensValIntegrals() {
+              return & _Integral;
+       }
+
 
        friend class Eccentricity<floatT>;
        friend class FlowCoefficients<floatT>;
@@ -787,6 +839,7 @@ class Eccentricity{
 
 };
 
+/*
 template<class floatT>
 class FlowCoefficients{
        private:
@@ -866,6 +919,7 @@ class FlowCoefficients{
               }
 
 };
+*/
 
 template<class floatT>
 void readData(Grid<floatT> & grid, const std::string fileName, int NEvents, int NNucleonsCore ){
