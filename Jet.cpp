@@ -734,11 +734,11 @@ class IntegratedEnergyDensity{
                      }
               }
 
-              IntegratedEnergyDensity<floatT> * getIntegrationEDensValAngles() {
+              std::vector<floatT> * getIntegrationEDensValAngles() {
                      return & _Angle;
               }
 
-              IntegratedEnergyDensity<floatT> * getIntegrationEDensValIntegrals() {
+              std::vector<floatT> * getIntegrationEDensValIntegrals() {
                      return & _Integral;
               }
 
@@ -1114,7 +1114,7 @@ void computeTest(){
        intEnergDens.integrals(NEvents);
 
        file.writeFileVector(intEnergDens.getIntegrationEDensValAngles(), "Angle.dat");
-       file.writeFileVector(intEnergDens.getIntegrationEDensValIntegrals(), "IntegratedEnergyDensity.dat")
+       file.writeFileVector(intEnergDens.getIntegrationEDensValIntegrals(), "IntegratedEnergyDensity.dat");
 
 /*       Eccentricity<PREC> ecc(intEnergDens);
 
