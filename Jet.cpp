@@ -101,7 +101,6 @@ class Grid{
               }
 };
 
-
 template<class floatT>
 class FileWriter{
        private:
@@ -290,14 +289,14 @@ class IntegratedEnergyDensity{
                                                         _AverageEDens2(Steps),
                                                         _AverageEDens3(Steps),
                                                         _AverageEDens4(Steps),
-                                                        _RadiusOne(3000 - _JetStartX),
-                                                        _EDensOne(3000 - _JetStartX),
-                                                        _RadiusTwo(_JetStartX),
-                                                        _EDensTwo(_JetStartX),
-                                                        _RadiusThree(3000 - _JetStartY),
-                                                        _EDensThree(3000 - _JetStartY),
-                                                        _RadiusFour(_JetStartY),
-                                                        _EDensFour(_JetStartY) {}
+                                                        _RadiusOne(3000 - (int) ((startSite.x() + 15. ) * 100.)),
+                                                        _EDensOne(3000 - (int) ((startSite.x() + 15. ) * 100.)),
+                                                        _RadiusTwo((int) ((startSite.x() + 15. ) * 100.)),
+                                                        _EDensTwo((int) ((startSite.x() + 15. ) * 100.)),
+                                                        _RadiusThree(3000 - (int) ((startSite.y() + 15. ) * 100.)),
+                                                        _EDensThree(3000 - (int) ((startSite.y() + 15. ) * 100.)),
+                                                        _RadiusFour((int) ((startSite.y() + 15. ) * 100.)),
+                                                        _EDensFour((int) ((startSite.y() + 15. ) * 100.)) {}
 
 
               // bilinear interpolation function between the grid points in the energy density grid
@@ -646,8 +645,9 @@ class IntegratedEnergyDensity{
                      	_AverageEDens1.at(j) += _EDensSec4.at(j) / IntegralNormalization;
                      }
               }
-friend class Eccentricity;
-friend class FlowCoefficients;
+
+              friend class Eccentricity;
+              friend class FlowCoefficients;
 };
 
 
@@ -692,9 +692,21 @@ class Eccentricity{
                      // perform a trapezoidal integration to calculate the eccentricity e2 ... e5
                      for (int i = 0; i < Steps; i++) {
                             for(int n =  2; n <= 5; n++) {
-                                   for(int j = 0; j < 3000 - IntegratedEnergyDensity._JetStartX; j++) {
-                                          _EccCounter1.at(n - 2) += (IntegratedEnergyDensity._RadiusOne.at(j + 1) - IntegratedEnergyDensity._RadiusOne.at(j)) * 0.5 * (IntegratedEnergyDensity._EDensOne.at(j) * std::pow(IntegratedEnergyDensity._RadiusOne.at(j),(n + 1)) + IntegratedEnergyDensity._EDensOne.at(j + 1) * std::pow(IntegratedEnergyDensity._RadiusOne.at(j + 1),(n + 1))) * exp(I * ((floatT) n * IntegratedEnergyDensity._AngleSec1.at(i)));
-                                          _EccDenom1.at(n - 2) += (IntegratedEnergyDensity._RadiusOne.at(j + 1) - IntegratedEnergyDensity._RadiusOne.at(j)) * 0.5 * (IntegratedEnergyDensity._EDensOne.at(j) * std::pow(IntegratedEnergyDensity._RadiusOne.at(j),(n + 1)) + IntegratedEnergyDensity._EDensOne.at(j + 1) * std::pow(IntegratedEnergyDensity._RadiusOne.at(j + 1),(n + 1)));
+                                   for(int j = 0; j < 3000 - _intEnergDens._JetStartX; j++) {
+                                          _EccCounter1.at(n - 2) += (_intEnergDens._RadiusOne.at(j + 1)
+                                                        - _intEnergDens._RadiusOne.at(j)) * 0.5
+                                                        * (_intEnergDens._EDensOne.at(j)
+                                                        * std::pow(_intEnergDens._RadiusOne.at(j),(n + 1))
+                                                        + _intEnergDens._EDensOne.at(j + 1)
+                                                        * std::pow(_intEnergDens._RadiusOne.at(j + 1),(n + 1)))
+                                                        * exp(I * ((floatT) n * _intEnergDens._AngleSec1.at(i)));
+
+                                          _EccDenom1.at(n - 2) += (_intEnergDens._RadiusOne.at(j + 1)
+                                                        - _intEnergDens._RadiusOne.at(j)) * 0.5
+                                                        * (_intEnergDens._EDensOne.at(j)
+                                                        * std::pow(_intEnergDens._RadiusOne.at(j),(n + 1))
+                                                        + _intEnergDens._EDensOne.at(j + 1)
+                                                        * std::pow(_intEnergDens._RadiusOne.at(j + 1),(n + 1)));
                                    }
                             }
                      }
@@ -706,9 +718,21 @@ class Eccentricity{
                      // perform a trapezoidal integration to calculate the eccentricity e2 ... e5
                      for (int i = 0; i < Steps; i++) {
                             for(int n =  2; n <= 5; n++) {
-                                   for(int j = 0; j < 3000 - IntegratedEnergyDensity._JetStartX; j++) {
-                                          _EccCounter2.at(n - 2) += (IntegratedEnergyDensity._RadiusTwo.at(j + 1) - IntegratedEnergyDensity._RadiusTwo.at(j)) * 0.5 * (IntegratedEnergyDensity._EDensTwo.at(j) * std::pow(IntegratedEnergyDensity._RadiusTwo.at(j),(n + 1)) + IntegratedEnergyDensity._EDensTwo.at(j + 1) * std::pow(IntegratedEnergyDensity._RadiusTwo.at(j + 1),(n + 1))) * exp(I * ((floatT) n * _AngleSec2.at(i)));
-                                          _EccDenom2.at(n - 2) += (IntegratedEnergyDensity._RadiusTwo.at(j + 1) - IntegratedEnergyDensity._RadiusTwo.at(j)) * 0.5 * (IntegratedEnergyDensity._EDensTwo.at(j) * std::pow(IntegratedEnergyDensity._RadiusTwo.at(j),(n + 1)) +IntegratedEnergyDensity._EDensTwo.at(j + 1) * std::pow(IntegratedEnergyDensity._RadiusTwo.at(j + 1),(n + 1)));
+                                   for(int j = 0; j < 3000 - _intEnergDens._JetStartX; j++){
+                                          _EccCounter2.at(n - 2) += (_intEnergDens._RadiusTwo.at(j + 1)
+                                                 - _intEnergDens._RadiusTwo.at(j)) * 0.5
+                                                 * (_intEnergDens._EDensTwo.at(j)
+                                                 * std::pow(_intEnergDens._RadiusTwo.at(j),(n + 1))
+                                                 + _intEnergDens._EDensTwo.at(j + 1)
+                                                 * std::pow(_intEnergDens._RadiusTwo.at(j + 1),(n + 1)))
+                                                 * exp(I * ((floatT) n * _intEnergDens._AngleSec2.at(i)));
+
+                                          _EccDenom2.at(n - 2) += (_intEnergDens._RadiusTwo.at(j + 1)
+                                                 - _intEnergDens._RadiusTwo.at(j)) * 0.5
+                                                 * (_intEnergDens._EDensTwo.at(j)
+                                                 * std::pow(_intEnergDens._RadiusTwo.at(j),(n + 1))
+                                                 +_intEnergDens._EDensTwo.at(j + 1)
+                                                 * std::pow(_intEnergDens._RadiusTwo.at(j + 1),(n + 1)));
                                    }
                             }
                      }
@@ -720,9 +744,21 @@ class Eccentricity{
                      // perform a trapezoidal integration to calculate the eccentricity e2 ... e5
                      for (int i = 0; i < Steps; i++) {
                             for(int n =  2; n <= 5; n++) {
-                                   for(int j = 0; j < 3000 - IntegratedEnergyDensity._JetStartX; j++) {
-                                          _EccCounter3.at(n - 2) += (IntegratedEnergyDensity._RadiusThree.at(j + 1) - IntegratedEnergyDensity._RadiusThree.at(j)) * 0.5 * (IntegratedEnergyDensity._EDensThree.at(j) * std::pow(IntegratedEnergyDensity._RadiusThree.at(j),(n + 1)) + IntegratedEnergyDensity._EDensThree.at(j + 1) * std::pow(IntegratedEnergyDensity._RadiusThree.at(j + 1),(n + 1))) * exp(I * ((floatT) n * _AngleSec3.at(i)));
-                                          _EccDenom3.at(n - 2) += (IntegratedEnergyDensity._RadiusThree.at(j + 1) - IntegratedEnergyDensity._RadiusThree.at(j)) * 0.5 * (IntegratedEnergyDensity._EDensThree.at(j) * std::pow(IntegratedEnergyDensity._RadiusThree.at(j),(n + 1)) + IntegratedEnergyDensity._EDensThree.at(j + 1) * std::pow(IntegratedEnergyDensity._RadiusThree.at(j + 1),(n + 1)));
+                                   for(int j = 0; j < 3000 - _intEnergDens._JetStartX; j++) {
+                                          _EccCounter3.at(n - 2) += (_intEnergDens._RadiusThree.at(j + 1)
+                                                        - _intEnergDens._RadiusThree.at(j)) * 0.5
+                                                        * (_intEnergDens._EDensThree.at(j)
+                                                        * std::pow(_intEnergDens._RadiusThree.at(j),(n + 1))
+                                                        + _intEnergDens._EDensThree.at(j + 1)
+                                                        * std::pow(_intEnergDens._RadiusThree.at(j + 1),(n + 1)))
+                                                        * exp(I * ((floatT) n * _intEnergDens._AngleSec3.at(i)));
+
+                                          _EccDenom3.at(n - 2) += (_intEnergDens._RadiusThree.at(j + 1)
+                                                        - _intEnergDens._RadiusThree.at(j)) * 0.5
+                                                        * (_intEnergDens._EDensThree.at(j)
+                                                        * std::pow(_intEnergDens._RadiusThree.at(j),(n + 1))
+                                                        + _intEnergDens._EDensThree.at(j + 1)
+                                                        * std::pow(_intEnergDens._RadiusThree.at(j + 1),(n + 1)));
                                    }
                             }
                      }
@@ -735,21 +771,33 @@ class Eccentricity{
                      // perform a trapezoidal integration to calculate the eccentricity e2 ... e5
                      for (int i = 0; i < Steps; i++) {
                             for(int n =  2; n <= 5; n++) {
-                                   for(int j = 0; j < 3000 - IntegratedEnergyDensity._JetStartX; j++) {
-                                          _EccCounter4.at(n - 2) += (IntegratedEnergyDensity._RadiusFour.at(j + 1) - IntegratedEnergyDensity._RadiusFour.at(j)) * 0.5 * (IntegratedEnergyDensity._EDensFour.at(j) * std::pow(IntegratedEnergyDensity._RadiusFour.at(j),(n + 1)) + IntegratedEnergyDensity._EDensFour.at(j + 1) * std::pow(IntegratedEnergyDensity._RadiusFour.at(j + 1),(n + 1))) * exp(I * ((floatT) n * _AngleSec4.at(i)));
-                                          _EccDenom4.at(n - 2) += (IntegratedEnergyDensity._RadiusFour.at(j + 1) - IntegratedEnergyDensity._RadiusFour.at(j)) * 0.5 * (IntegratedEnergyDensity._EDensFour.at(j) * std::pow(IntegratedEnergyDensity._RadiusFour.at(j),(n + 1)) + IntegratedEnergyDensity._EDensFour.at(j + 1) * std::pow(IntegratedEnergyDensity._RadiusFour.at(j + 1),(n + 1)));
+                                   for(int j = 0; j < 3000 - _intEnergDens._JetStartX; j++) {
+                                          _EccCounter4.at(n - 2) += (_intEnergDens._RadiusFour.at(j + 1)
+                                                 - _intEnergDens._RadiusFour.at(j)) * 0.5
+                                                 * (_intEnergDens._EDensFour.at(j)
+                                                 * std::pow(_intEnergDens._RadiusFour.at(j),(n + 1))
+                                                 + _intEnergDens._EDensFour.at(j + 1)
+                                                 * std::pow(_intEnergDens._RadiusFour.at(j + 1),(n + 1)))
+                                                 * exp(I * ((floatT) n * _intEnergDens._AngleSec4.at(i)));
+
+                                          _EccDenom4.at(n - 2) += (_intEnergDens._RadiusFour.at(j + 1)
+                                                 - _intEnergDens._RadiusFour.at(j)) * 0.5
+                                                 * (_intEnergDens._EDensFour.at(j)
+                                                 * std::pow(_intEnergDens._RadiusFour.at(j),(n + 1))
+                                                 + _intEnergDens._EDensFour.at(j + 1)
+                                                 * std::pow(_intEnergDens._RadiusFour.at(j + 1),(n + 1)));
                                    }
                             }
                      }
-              }
 
-              //calculate the eccentricity e2 ... e5 for one event and store the value in the array
-              for(int n = 0; n < 4; n++)
-              {
-              	EventEccentricity.at(n) = std::abs(-(_EccCounter1.at(n) + _EccCounter2.at(n)
+
+                     //calculate the eccentricity e2 ... e5 for one event and store the value in the array
+                     for(int n = 0; n < 4; n++){
+              	             _EventEccentricity.at(n) = std::abs(-(_EccCounter1.at(n) + _EccCounter2.at(n)
                                           + _EccCounter3.at(n) + _EccCounter4.at(n))
                                           / (_EccDenom1.at(n) + _EccDenom2.at(n)
                                           + _EccDenom3.at(n) + _EccDenom4.at(n)));
+                     }
               }
 
 };
@@ -763,9 +811,12 @@ class FlowCoefficients{
 
               std::vector<floatT> _Fourier;
 
+              IntegratedEnergyDensity<floatT> & _intEnergDens;
+
        public:
               // constructor
-              FlowCoefficients():
+              FlowCoefficients(EnergyDensity<floatT> & newEnergDens):
+                            _intEnergDens(newEnergDens),
                             _MergedAngles(4 * Steps),
                             _MergedIntegrals(4 * Steps),
                             _Fourier(6) {}
@@ -773,15 +824,15 @@ class FlowCoefficients{
               // merged vectors
               void mergeVectors() {
                      for(int i = 0; i < Steps; i++) {
-                     	_MergedAngles.at(i) = _AngleSec1.at(i);
-                     	_MergedAngles.at(Steps + i) = _AngleSec2.at(i);
-                            _MergedAngles.at(2 * Steps + i) = _AngleSec3.at(i);
-                            _MergedAngles.at(3 * Steps + i) = _AngleSec4.at(i);
+                     	_MergedAngles.at(i) = _intEnergDens._AngleSec1.at(i);
+                     	_MergedAngles.at(Steps + i) = _intEnergDens._AngleSec2.at(i);
+                            _MergedAngles.at(2 * Steps + i) = _intEnergDens._AngleSec3.at(i);
+                            _MergedAngles.at(3 * Steps + i) = _intEnergDens._AngleSec4.at(i);
 
-                            _MergedIntegrals.at(i) = _EDensSec1.at(i);
-                     	_MergedIntegrals.at(Steps + i) = _EDensSec2.at(i);
-                            _MergedIntegrals.at(2 * Steps + i) = _EDensSec3.at(i);
-                            _MergedIntegrals.at(3 * Steps + i) = _EDensSec4.at(i);
+                            _MergedIntegrals.at(i) = _intEnergDens._EDensSec1.at(i);
+                     	_MergedIntegrals.at(Steps + i) = _intEnergDens._EDensSec2.at(i);
+                            _MergedIntegrals.at(2 * Steps + i) = _intEnergDens._EDensSec3.at(i);
+                            _MergedIntegrals.at(3 * Steps + i) = _intEnergDens._EDensSec4.at(i);
                      }
               }
 
@@ -789,14 +840,19 @@ class FlowCoefficients{
               void flowCoefficients() {
                      floatT a0 = 0.0;
                      for(int i=0; i < 4 * Steps - 1; i++) {
-                     	a0 += (((_MergedIntegrals.at(i) + _MergedIntegrals.at(i + 1)) / 2.0) * IntegratedEnergyDensity._AngleStep) / PI;
+                     	a0 += (((_MergedIntegrals.at(i) + _MergedIntegrals.at(i + 1)) / 2.0)
+                                   * _intEnergDens._AngleStep) / PI;
                      }
 
                      floatT aFourier = 0.0;
                      for(int aCount=1; aCount <= 3; aCount++) {
                      	aFourier = 0.0;
                      	for(int i=0; i < 4 * Steps - 1; i++) {
-                     		aFourier += ((((_MergedIntegrals.at(i) + _MergedIntegrals.at(i + 1)) / 2.0) * std::cos((floatT) aCount * ((_MergedAngles.at(i) + _MergedAngles.at(i + 1)) / 2.0)))* IntegratedEnergyDensity._AngleStep) / PI;
+                     		aFourier += ((((_MergedIntegrals.at(i) + _MergedIntegrals.at(i + 1)) / 2.0)
+                                                 * std::cos((floatT) aCount
+                                                               * ((_MergedAngles.at(i)
+                                                               + _MergedAngles.at(i + 1)) / 2.0)))
+                                                 * _intEnergDens._AngleStep) / PI;
                      	}
                      	_Fourier.at(aCount - 1) = aFourier / (a0 / 2.0);
                      	aFourier = 0.0;
@@ -806,7 +862,12 @@ class FlowCoefficients{
                      for(int bCount=1; bCount <= 3; bCount++) {
                      	bFourier = 0.0;
                      	for(int k=0; k < 4*Steps-1; k++) {
-                     		bFourier += ((((_MergedIntegrals.at(k) + _MergedIntegrals.at(k + 1)) / 2.0) * std::sin((floatT) bCount * ((_MergedAngles.at(k) + _MergedAngles.at(k + 1)) / 2.0))) * IntegratedEnergyDensity._AngleStep) / PI;
+                     		bFourier += ((((_MergedIntegrals.at(k)
+                                                        + _MergedIntegrals.at(k + 1)) / 2.0)
+                                                        * std::sin((floatT) bCount
+                                                        * ((_MergedAngles.at(k)
+                                                        + _MergedAngles.at(k + 1)) / 2.0)))
+                                                        * _intEnergDens._AngleStep) / PI;
                      	}
                      	_Fourier.at(bCount + 2) = bFourier / (a0 / 2.0);
                      	bFourier = 0.0;
