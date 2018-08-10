@@ -839,7 +839,7 @@ class Eccentricity{
 
 };
 
-/*
+
 template<class floatT>
 class FlowCoefficients{
        private:
@@ -868,9 +868,11 @@ class FlowCoefficients{
               //calculation of the flow coefficients
               void _flowCoefficients() {
                      // Compute an Fourier series
-                     floatT norm0 = 0.0;
+                     floatT fourCoeff_0 = 0.0;
                      for(int i=0; i < 4 * Steps - 1; i++) {
-                            a0 += (((_MergedIntegrals.at(i) + _MergedIntegrals.at(i + 1)) / 2.0)
+                            fourCoeff_0 += (
+                                   ((_MergedIntegrals.at(i)
+                                          + _MergedIntegrals.at(i + 1)) / 2.0)
                                    * _intEnergDens._AngleStep) / PI;
                      }
 
@@ -878,13 +880,13 @@ class FlowCoefficients{
                      for(int aCount=1; aCount <= 3; aCount++) {
                             aFourier = 0.0;
                             for(int i=0; i < 4 * Steps - 1; i++) {
-                                   aFourier += ((((_MergedIntegrals.at(i) + _MergedIntegrals.at(i + 1)) / 2.0)
+                                   aFourier += (
+                                          (((_MergedIntegrals.at(i) + _MergedIntegrals.at(i + 1)) / 2.0)
                                                  * std::cos((floatT) aCount
-                                                               * ((_MergedAngles.at(i)
-                                                               + _MergedAngles.at(i + 1)) / 2.0)))
-                                                 * _intEnergDens._AngleStep) / PI;
+                                                 * ((_MergedAngles.at(i)+ _MergedAngles.at(i + 1)) / 2.0)))
+                                          * _intEnergDens._AngleStep) / PI;
                             }
-                            _Fourier.at(aCount - 1) = aFourier / (a0 / 2.0);
+                            _Fourier.at(aCount - 1) = aFourier / (fourCoeff_0 / 2.0);
                             aFourier = 0.0;
                      }
 
@@ -899,10 +901,10 @@ class FlowCoefficients{
                                                         + _MergedAngles.at(k + 1)) / 2.0)))
                                                         * _intEnergDens._AngleStep) / PI;
                             }
-                            _Fourier.at(bCount + 2) = bFourier / (a0 / 2.0);
+                            _Fourier.at(bCount + 2) = bFourier / (fourCoeff_0 / 2.0);
                             bFourier = 0.0;
                      }
-                     a0 = 0.0;
+                     fourCoeff_0 = 0.0;
               }
 
        public:
@@ -914,12 +916,15 @@ class FlowCoefficients{
                             _Fourier(6) {}
 
               void computFlowCoefficients(){
+                     // compute flow coefficients
+                     _flowCoefficients();
 
-
+                     // merge them
+                     _mergeVectors();
               }
 
 };
-*/
+
 
 template<class floatT>
 void readData(Grid<floatT> & grid, const std::string fileName, int NEvents, int NNucleonsCore ){
