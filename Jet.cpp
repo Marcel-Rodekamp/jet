@@ -707,7 +707,6 @@ class IntegratedEnergyDensity{
               friend class FlowCoefficients;
 };
 
-
 template<class floatT>
 class Eccentricity{
        private:
@@ -718,7 +717,7 @@ class Eccentricity{
 
               IntegratedEnergyDensity<floatT> & _intEnergDens;
 
-              void _computeEccConterAndDnormPerSector(  std::vector<floatT> * radius,
+              void _computeEccConterAndDnomPerSector(  std::vector<floatT> * radius,
                                           std::vector<floatT> * eneDens,
                                           std::vector<floatT> * angle ){
                      // define the imaginary I
@@ -744,21 +743,21 @@ class Eccentricity{
                      }
               }
 
-              void _computeEcc(){
+              void inline _computeEcc(){
                      // calculation of the eccentricity count and Dnorm for sector 1
-                     _computeEccConterAndDnormPerSector(_intEnergDens._RadiusOne, _intEnergDens._EDensOne,
+                     _computeEccConterAndDnomPerSector(_intEnergDens._RadiusOne, _intEnergDens._EDensOne,
                                    _intEnergDens._AngleSec1);
 
                      // calculation of the eccentricity count and Dnorm for sector 2
-                     _computeEccConterAndDnormPerSector(_intEnergDens._RadiusTwo, _intEnergDens._EDensTwo,
+                     _computeEccConterAndDnomPerSector(_intEnergDens._RadiusTwo, _intEnergDens._EDensTwo,
                                    _intEnergDens._AngleSec2);
 
                      // calculation of the eccentricity count and Dnorm for sector 3
-                     _computeEccConterAndDnormPerSector(_intEnergDens._RadiusThree, _intEnergDens._EDensThree,
+                     _computeEccConterAndDnomPerSector(_intEnergDens._RadiusThree, _intEnergDens._EDensThree,
                                    _intEnergDens._AngleSec3);
 
                      // calculation of the eccentricity count and Dnorm for sector 4
-                     _computeEccConterAndDnormPerSector(_intEnergDens._RadiusFour, _intEnergDens._EDensFour,
+                     _computeEccConterAndDnomPerSector(_intEnergDens._RadiusFour, _intEnergDens._EDensFour,
                                    _intEnergDens._AngleSec4);
 
                      // calculation of the eccentricity
@@ -787,7 +786,6 @@ class Eccentricity{
 
 
 };
-
 
 template<class floatT>
 class FlowCoefficients{
