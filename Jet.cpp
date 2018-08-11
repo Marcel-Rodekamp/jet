@@ -873,17 +873,17 @@ class Eccentricity{
                      for (int i = 0; i < Steps; i++) {
                             for(int n =  2; n <= 5; n++) {
                                    for(int j = 0; j < 3000 - _intEnergDens._JetStartX; j++) {
-                                          _EccCounter.at(n - 2) += 0.5 * (radius.at(j + 1) - radius.at(j))
-                                                        * (eneDens.at(j) * std::pow(radius.at(j),(n + 1))
-                                                               + eneDens.at(j + 1)
-                                                               * std::pow(radius.at(j + 1),(n + 1)))
-                                                        * exp(I * ((floatT) n * angle.at(i)));
+                                          _EccCounter.at(n - 2) += 0.5 * (radius -> at(j + 1) - radius -> at(j))
+                                                        * (eneDens -> at(j) * std::pow(radius -> at(j),(n + 1))
+                                                               + eneDens -> at(j + 1)
+                                                               * std::pow(radius -> at(j + 1),(n + 1)))
+                                                        * exp(I * ((floatT) n * angle -> at(i)));
 
-                                          _EccDenom.at(n - 2) += 0.5 * (radius.at(j + 1) - radius.at(j))
-                                                        * (eneDens.at(j)
-                                                               * std::pow(radius.at(j),(n + 1))
-                                                               + eneDens.at(j + 1)
-                                                               * std::pow(radius.at(j + 1),(n + 1)));
+                                          _EccDenom.at(n - 2) += 0.5 * (radius -> at(j + 1) - radius -> at(j))
+                                                        * (eneDens -> at(j)
+                                                               * std::pow(radius -> at(j),(n + 1))
+                                                               + eneDens -> at(j + 1)
+                                                               * std::pow(radius -> at(j + 1),(n + 1)));
                                    }
                             }
                      }
@@ -970,7 +970,6 @@ class Eccentricity{
 
 };
 
-
 template<class floatT>
 class FlowCoefficients{
        private:
@@ -1046,7 +1045,7 @@ class FlowCoefficients{
                             _MergedIntegrals(4 * Steps),
                             _Fourier(6) {}
 
-              void computFlowCoefficients(){
+              void computeFlowCoefficients(){
                      // compute flow coefficients
                      _flowCoefficients();
 
@@ -1207,7 +1206,7 @@ void computeTest(){
 
        energDens.smearedEnergyDensity();
 
-       file.writeFileGrid(energDens.getSmearedEnergyDensData());
+       //file.writeFileGrid(energDens.getSmearedEnergyDensData());
 
        std::cout << "Compute integrations in all directions" << '\n';
 
@@ -1215,24 +1214,22 @@ void computeTest(){
 
        IntegratedEnergyDensity<PREC> intEnergDens(startSite, energDens);
 
+       intEnergDens.computeIntegratedEnergyDensity();
 
+       std::cout << "Compute eccentricities" << '\n';
 
-       file.writeFileVector(intEnergDens.getIntegrationEDensValAngles(), "Angle.dat");
-       file.writeFileVector(intEnergDens.getIntegrationEDensValIntegrals(), "IntegratedEnergyDensity.dat");
+       Eccentricity<PREC> ecc(intEnergDens);
 
-       /*       Eccentricity<PREC> ecc(intEnergDens);
+       ecc.computeEccentricity();
 
-       ecc.eccentricitySector1();
-       ecc.eccentricitySector2();
-       ecc.eccentricitySector3();
-       ecc.eccentricitySector4();
        ecc.eventEccentricity();
 
-       file.writeFileVector(, "Eccentricity.dat");*/
+       std::cout << "Compute flow coefficients" << '\n';
 
-       // file.writeFileGrid(energDens.getSmearedEnergyDensData());
+       FlowCoefficients<PREC> flCoeffs(intEnergDens);
 
-       // file.writeFileGrid(energDens.getSmearedEnergyDensData());
+       flCoeffs.computeFlowCoefficients();
+
 }
 
 // Test FileWriter
