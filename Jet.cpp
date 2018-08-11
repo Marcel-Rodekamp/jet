@@ -738,10 +738,10 @@ class IntegratedEnergyDensity{
                      floatT yy1 = intSite.y() - intSiteLowerRightCor.y();
 
                      // compute the interpolation value and return it
-                     return  (intSiteLowerLeftCor * x2x * y2y
-                                   + intSiteLowerRightCor * xx1 * y2y
-                                   + intSiteUpperLeftCor * x2x * yy1
-                                   + intSiteUpperRightCor * xx1 * yy1)
+                     return  (_smearEnerDensGrid.getSite(intSiteLowerLeftCor) * x2x * y2y
+                                   + _smearEnerDensGrid.getSite(intSiteLowerRightCor) * xx1 * y2y
+                                   + _smearEnerDensGrid.getSite(intSiteUpperLeftCor) * x2x * yy1
+                                   + _smearEnerDensGrid.getSite(intSiteUpperRightCor) * xx1 * yy1)
                                    /(x2x1 * y2y1);
               }
 
@@ -768,15 +768,15 @@ class IntegratedEnergyDensity{
                                                         _JetStartX((int) ((startSite.x() + 15. ) * 100.) ),
                                                         _JetStartY((int) ((startSite.y() + 15. ) * 100.) ),
                                                         _AngleStep((PI / 2.0) / (Steps)),
-                                                        _smearEnerDensGrid(newEnergDens),
+                                                        _smearEnerDensGrid(* newEnergDens.getSmearedEnergyDensData()),
                                                         _AngleSec1(Steps),
                                                         _EDensSec1(Steps),
                                                         _AngleSec2(Steps),
                                                         _EDensSec2(Steps),
                                                         _AngleSec3(Steps),
                                                         _EDensSec3(Steps),
-                                                        _AngleSec3(Steps),
-                                                        _EDensSec3(Steps),
+                                                        _AngleSec4(Steps),
+                                                        _EDensSec4(Steps),
                                                         _Integral(4*Steps),
                                                         _AverageEDens1(Steps),
                                                         _AverageEDens2(Steps),
@@ -814,6 +814,23 @@ class IntegratedEnergyDensity{
               }
        }
 
+       void angles() {
+              for (int i = 0; i < Steps; i++) {
+                     _AngleSec1.push_back(_AngleSec2.at(i));
+                     _AngleSec1.push_back(_AngleSec3.at(i));
+                     _AngleSec1.push_back(_AngleSec4.at(i));
+              }
+       }
+
+       void integrals(int NEvents) {
+              for (int i = 0; i < Steps; i++) {
+                     _Integral.at(i) = _AverageEDens1.at(i) / NEvents;
+                     _Integral.at(Steps + i) = _AverageEDens2.at(i) / NEvents;
+                     _Integral.at(2 * Steps + i) = _AverageEDens3.at(i) / NEvents;
+                     _Integral.at(3 * Steps + i) = _AverageEDens4.at(i) / NEvents;
+              }
+       }
+
        std::vector<floatT> * getIntegrationEDensValAngles() {
               return & _AngleSec1;
        }
@@ -821,33 +838,6 @@ class IntegratedEnergyDensity{
        std::vector<floatT> * getIntegrationEDensValIntegrals() {
               return & _Integral;
        }
-
-
-              void angles() {
-                     for (int i = 0; i < Steps; i++) {
-                            _Angle.at(i) = _AngleSec1.at(i);
-                            _Angle.at(Steps + i) = _AngleSec2.at(i);
-                            _Angle.at(2 * Steps + i) = _AngleSec3.at(i);
-                            _Angle.at(3 * Steps + i) = _AngleSec4.at(i);
-                     }
-              }
-
-              void integrals(int NEvents) {
-                     for (int i = 0; i < Steps; i++) {
-                            _Integral.at(i) = _AverageEDens1.at(i) / NEvents;
-                            _Integral.at(Steps + i) = _AverageEDens2.at(i) / NEvents;
-                            _Integral.at(2 * Steps + i) = _AverageEDens3.at(i) / NEvents;
-                            _Integral.at(3 * Steps + i) = _AverageEDens4.at(i) / NEvents;
-                     }
-              }
-
-              std::vector<floatT> * getIntegrationEDensValAngles() {
-                     return & _Angle;
-              }
-
-              std::vector<floatT> * getIntegrationEDensValIntegrals() {
-                     return & _Integral;
-              }
 
               friend class Eccentricity<floatT>;
               friend class FlowCoefficients<floatT>;
@@ -863,9 +853,9 @@ class Eccentricity{
 
               IntegratedEnergyDensity<floatT> & _intEnergDens;
 
-              void _computeEccConterAndDnomPerSector(  std::vector<floatT> * radius,
-                                          std::vector<floatT> * eneDens,
-                                          std::vector<floatT> * angle ){
+              void _computeEccConterAndDnomPerSector(  std::vector<floatT> & radius,
+                                          std::vector<floatT> & eneDens,
+                                          std::vector<floatT> & angle ){
                      // define the imaginary I
                      const std::complex<floatT> I(0.0,1.0);
 
@@ -873,17 +863,17 @@ class Eccentricity{
                      for (int i = 0; i < Steps; i++) {
                             for(int n =  2; n <= 5; n++) {
                                    for(int j = 0; j < 3000 - _intEnergDens._JetStartX; j++) {
-                                          _EccCounter.at(n - 2) += 0.5 * (radius -> at(j + 1) - radius -> at(j))
-                                                        * (eneDens -> at(j) * std::pow(radius -> at(j),(n + 1))
-                                                               + eneDens -> at(j + 1)
-                                                               * std::pow(radius -> at(j + 1),(n + 1)))
-                                                        * exp(I * ((floatT) n * angle -> at(i)));
+                                          _EccCounter.at(n - 2) += 0.5 * (radius.at(j + 1) - radius.at(j))
+                                                        * (eneDens.at(j) * std::pow(radius.at(j),(n + 1))
+                                                               + eneDens.at(j + 1)
+                                                               * std::pow(radius.at(j + 1),(n + 1)))
+                                                        * exp(I * ((floatT) n * angle.at(i)));
 
-                                          _EccDenom.at(n - 2) += 0.5 * (radius -> at(j + 1) - radius -> at(j))
-                                                        * (eneDens -> at(j)
-                                                               * std::pow(radius -> at(j),(n + 1))
-                                                               + eneDens -> at(j + 1)
-                                                               * std::pow(radius -> at(j + 1),(n + 1)));
+                                          _EccDenom.at(n - 2) += 0.5 * (radius.at(j + 1) - radius.at(j))
+                                                        * (eneDens.at(j)
+                                                               * std::pow(radius.at(j),(n + 1))
+                                                               + eneDens.at(j + 1)
+                                                               * std::pow(radius.at(j + 1),(n + 1)));
                                    }
                             }
                      }
@@ -891,8 +881,8 @@ class Eccentricity{
 
               void inline _computeEcc(){
                      // calculation of the eccentricity count and Dnorm for sector 1
-                     _computeEccConterAndDnomPerSector(_intEnergDens._RadiusOne, _intEnergDens._EDensOne,
-                                   _intEnergDens._AngleSec1);
+                     _computeEccConterAndDnomPerSector(_intEnergDens._RadiusOne,  _intEnergDens._EDensOne,
+                                    _intEnergDens._AngleSec1);
 
                      // calculation of the eccentricity count and Dnorm for sector 2
                      _computeEccConterAndDnomPerSector(_intEnergDens._RadiusTwo, _intEnergDens._EDensTwo,
@@ -925,49 +915,9 @@ class Eccentricity{
                      _computeEcc();
               }
 
-              void eccentricitySector4() {
-                     //define the imaginary I.
-                     const std::complex<floatT> I(0.0,1.0);
-                     // perform a trapezoidal integration to calculate the eccentricity e2 ... e5
-                     for (int i = 0; i < Steps; i++) {
-                            for(int n =  2; n <= 5; n++) {
-                                   for(int j = 0; j < 3000 - _intEnergDens._JetStartX; j++) {
-                                          _EccCounter4.at(n - 2) += (_intEnergDens._RadiusFour.at(j + 1)
-                                                 - _intEnergDens._RadiusFour.at(j)) * 0.5
-                                                 * (_intEnergDens._EDensFour.at(j)
-                                                 * std::pow(_intEnergDens._RadiusFour.at(j),(n + 1))
-                                                 + _intEnergDens._EDensFour.at(j + 1)
-                                                 * std::pow(_intEnergDens._RadiusFour.at(j + 1),(n + 1)))
-                                                 * exp(I * ((floatT) n * _intEnergDens._AngleSec4.at(i)));
-
-                                          _EccDenom4.at(n - 2) += (_intEnergDens._RadiusFour.at(j + 1)
-                                                 - _intEnergDens._RadiusFour.at(j)) * 0.5
-                                                 * (_intEnergDens._EDensFour.at(j)
-                                                 * std::pow(_intEnergDens._RadiusFour.at(j),(n + 1))
-                                                 + _intEnergDens._EDensFour.at(j + 1)
-                                                 * std::pow(_intEnergDens._RadiusFour.at(j + 1),(n + 1)));
-                                   }
-                            }
-                     }
-              }
-
-              void eventEccentricity() {
-                     //calculate the eccentricity e2 ... e5 for one event and store the value in the array
-                     for(int n = 0; n < 4; n++){
-                                  _EventEccentricity.at(n) = std::abs(
-                                          -(_EccCounter1.at(n) + _EccCounter2.at(n)
-                                          + _EccCounter3.at(n) + _EccCounter4.at(n))
-                                          / (_EccDenom1.at(n) + _EccDenom2.at(n)
-                                          + _EccDenom3.at(n) + _EccDenom4.at(n)));
-                     }
-              }
-
               std::vector<floatT> * getEccenetricityData(){
                      return & _EventEccentricity;
               }
-
-
-
 };
 
 template<class floatT>
@@ -1039,8 +989,8 @@ class FlowCoefficients{
 
        public:
               // constructor
-              FlowCoefficients(EnergyDensity<floatT> & newEnergDens):
-                            _intEnergDens(newEnergDens),
+              FlowCoefficients(IntegratedEnergyDensity<floatT> & newIntEnergDens):
+                            _intEnergDens(newIntEnergDens),
                             _MergedAngles(4 * Steps),
                             _MergedIntegrals(4 * Steps),
                             _Fourier(6) {}
@@ -1192,11 +1142,11 @@ void computeTest(){
 
        std::cout << "Read data " << '\n';
 
-       std::string filename = "Pb67.6.txt";
+       std::string filename = "Pb67.6_out.txt";
 
        FileWriter<PREC> file(filename);
 
-       // file.readFile(rawDataGrid);
+       readData(rawDataGrid, "Pb67.6.txt", NEvents, NNucleonsCore );
 
        std::cout << "Compute energy density" << '\n';
 
@@ -1207,6 +1157,14 @@ void computeTest(){
        energDens.smearedEnergyDensity();
 
        //file.writeFileGrid(energDens.getSmearedEnergyDensData());
+       // write smeared Energy density in "Pb67.6_out.txt"
+       for(int x = 0; x < rawDataGrid.getMaxSitesPerDirection(); x += 10){
+              for(int y = 0; y < rawDataGrid.getMaxSitesPerDirection(); y += 10){
+                     Site si(x,y);
+                     file << x << "\t" << y << "\t" << energDens.getSmearedEnergyDensData() -> getSite(si) << std::endl;
+              }
+       }
+       
 
        std::cout << "Compute integrations in all directions" << '\n';
 
@@ -1221,8 +1179,6 @@ void computeTest(){
        Eccentricity<PREC> ecc(intEnergDens);
 
        ecc.computeEccentricity();
-
-       ecc.eventEccentricity();
 
        std::cout << "Compute flow coefficients" << '\n';
 
