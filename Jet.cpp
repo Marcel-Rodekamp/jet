@@ -107,7 +107,6 @@ class Grid{
               }
 
               // run through the whole grid
-              // TODO What happens at site s(0,0)!!!
               bool runThroughGrid(Site & site){
                      // compute possible new x value
                      int newCoordX = site.x() + 1;
@@ -121,7 +120,7 @@ class Grid{
                             int newCoordY = site.y() + 1;
 
                             // check if the y value is on  the grid
-                            if(newCoordY < _maxSitesPerDirection){
+                            if(newCoordY <= _maxSitesPerDirection){
                                    site.yUp();
                                    site.setX(0);
                             }
@@ -151,8 +150,8 @@ class FileWriter{
                           }
 
                          // set high precision
-                         _fileStream.precision(15);
-                         _fileStream.setf(std::ios::scientific);
+                         // _fileStream.precision(15);
+                         // _fileStream.setf(std::ios::scientific);
                   }
 
        public:
@@ -202,14 +201,14 @@ class EnergyDensity{
                      Site site(0,0);
                      int NColl;
 
-                     while(_grid.runThroughGrid(site)){
+                     do{
                             NColl = (int) grid.getSite(site);
 
                             // (15*800/46^4) * NColl^4
                             EDens = 0.002680093338717343 * NColl * NColl * NColl * NColl;
 
                             _grid.setSite(site,EDens);
-                     }
+                     }while(grid.runThroughGrid(site));
               }
 
               void smearedEnergyDensity(){
@@ -231,9 +230,9 @@ class EnergyDensity{
                             }
                      }
 
-                     while(_grid.runThroughGrid(site)){
-                            if (_grid.getSite(site) != 0 ) {
 
+                     do{
+                            if (_grid.getSite(site) != 0 ) {
                                    // loop through a square with side length tmpRadNucleon centered on the
                                    // not zero site
                                    for(int x = site.x() - tmpRadNucleon; x < site.x() + tmpRadNucleon; x++){
@@ -244,8 +243,9 @@ class EnergyDensity{
                                    }
                                    }
                             }
-                     }
+                     }while( _grid.runThroughGrid(site));
               }
+
 
               Grid<floatT> * getSmearedEnergyDensData(){
                      return & _gridSmeared;
@@ -327,16 +327,16 @@ class IntegratedEnergyDensity{
                             // point-slope form of equation for straight line y = m(x-x1)+y1
                             // calculate for each x value of the grid a value for y
                      	for(int interCoordx = _JetStartX;
-                                    interCoordx < _smearEnerDensGrid.getMaxSitesPerDirection();
+                                    interCoordx < _smearEnerDensGrid.getMaxSitesPerDirection() - _RealX;
                                     interCoordx++) {
 
                                    interCoordy = slope * (interCoordx - _JetStartX) +  _JetStartY;
 
                                    // check wheather the point lies on the grid or not (needed for
                                    // integration which does not start at the origin (real (0.0,0.0))
-
                      		if(interCoordy < _smearEnerDensGrid.getMaxSitesPerDirection()
                                           && interCoordy >= 0.0) {
+
                                           // find the four gridpoints {(x1,y1),(x2,y1),(x1,y2),(x2,y2)}
                                           // for the interpolation around a point (x,y)
                      			interCoordx_1 = (int) std::floor((floatT) interCoordx);
@@ -365,8 +365,8 @@ class IntegratedEnergyDensity{
 
                                           // store point at line and the interpolated value at that point
                      			_RadiusOne.at(interCoordx - _JetStartX) = distFromJetStart;
-                     			_EDensOne.at(interCoordx - _JetStartX) = Interpol;
 
+                     			_EDensOne.at(interCoordx - _JetStartX) = Interpol;
                      		}
                      		else {
                                           // calculate the distance from the jet origin
@@ -768,7 +768,8 @@ class IntegratedEnergyDensity{
                                                         _JetStartX((int) ((startSite.x() + 15. ) * 100.) ),
                                                         _JetStartY((int) ((startSite.y() + 15. ) * 100.) ),
                                                         _AngleStep((PI / 2.0) / (Steps)),
-                                                        _smearEnerDensGrid(* newEnergDens.getSmearedEnergyDensData()),
+                                                        _smearEnerDensGrid(
+                                                               * newEnergDens.getSmearedEnergyDensData()),
                                                         _AngleSec1(Steps),
                                                         _EDensSec1(Steps),
                                                         _AngleSec2(Steps),
@@ -782,14 +783,30 @@ class IntegratedEnergyDensity{
                                                         _AverageEDens2(Steps),
                                                         _AverageEDens3(Steps),
                                                         _AverageEDens4(Steps),
-                                                        _RadiusOne(3000 - (int) ((startSite.x() + 15. ) * 100.)),
-                                                        _EDensOne(3000 - (int) ((startSite.x() + 15. ) * 100.)),
-                                                        _RadiusTwo((int) ((startSite.x() + 15. ) * 100.)),
-                                                        _EDensTwo((int) ((startSite.x() + 15. ) * 100.)),
-                                                        _RadiusThree(3000 - (int) ((startSite.y() + 15. ) * 100.)),
-                                                        _EDensThree(3000 - (int) ((startSite.y() + 15. ) * 100.)),
-                                                        _RadiusFour((int) ((startSite.y() + 15. ) * 100.)),
-                                                        _EDensFour((int) ((startSite.y() + 15. ) * 100.)) {}
+                                                        _RadiusOne(newEnergDens.getSmearedEnergyDensData()
+                                                                      -> getMaxSitesPerDirection()
+                                                                      - startSite.x()),
+                                                        _EDensOne(newEnergDens.getSmearedEnergyDensData()
+                                                                      -> getMaxSitesPerDirection()
+                                                                      - startSite.x()),
+                                                        _RadiusTwo(std::abs(startSite.x()
+                                                               - newEnergDens.getSmearedEnergyDensData()
+                                                               -> getMaxSitesPerDirection())),
+                                                        _EDensTwo(std::abs(startSite.x()
+                                                               - newEnergDens.getSmearedEnergyDensData()
+                                                               -> getMaxSitesPerDirection())),
+                                                        _RadiusThree( newEnergDens.getSmearedEnergyDensData()
+                                                               -> getMaxSitesPerDirection()
+                                                               - startSite.y()),
+                                                        _EDensThree( newEnergDens.getSmearedEnergyDensData()
+                                                               -> getMaxSitesPerDirection()
+                                                               - startSite.y()),
+                                                        _RadiusFour(std::abs(startSite.y()
+                                                               - newEnergDens.getSmearedEnergyDensData()
+                                                               -> getMaxSitesPerDirection())),
+                                                        _EDensFour(std::abs(startSite.y()
+                                                               - newEnergDens.getSmearedEnergyDensData()
+                                                               -> getMaxSitesPerDirection())) {}
 
        void computeIntegratedEnergyDensity(){
               // compute the integrated energy density in each sector
@@ -1005,13 +1022,15 @@ class FlowCoefficients{
 
 };
 
-
 template<class floatT>
 void readData(Grid<floatT> & grid, const std::string fileName, int NEvents, int NNucleonsCore ){
        std::fstream file;
        file.open(fileName.c_str(), std::ios::in);
 
-       if(!file.is_open()){return;}
+       if(!file.is_open()){
+              std::cout << "ERROR@readFile: File could not be opend!" << '\n';
+              return;
+       }
 
        std::vector<floatT> row(4);
        // loop through the data file which format is clarified by
@@ -1030,7 +1049,9 @@ void readData(Grid<floatT> & grid, const std::string fileName, int NEvents, int 
               // compute the site
               Site site(x, y);
               // set NColl on the grid
+
               grid.setSite(site, row[3]);
+
        }
 
         file.close();
@@ -1041,12 +1062,7 @@ int main(int argc, char const *argv[]) {
 
        start = std::clock();
 
-
-       // runThroughGridTest(3);
-
-       // computeTest();
-
-       // FileWriterTest();
+       computeTest();
 
        std::cout << ( std::clock() - start ) / (double) CLOCKS_PER_SEC << "s" << '\n';
 
@@ -1092,9 +1108,9 @@ void runThroughGridTest(int max){
        Site site(0,0);
        int vectorIndex = 0;
 
-       while(grid.runThroughGrid(site)){
+       do{
               std::cout << "now at (x,y): (" << site.x() << "," << site.y() << ")" << '\n';
-       }
+       }while(grid.runThroughGrid(site));
 
        std::cout << "\nloop through lattice\n" << '\n';
 
@@ -1110,41 +1126,35 @@ void runThroughGridTest(int max){
 
 void computeTest(){
        // number of events
-       int NEvents = 1;
-
-       // std::cout << "Number of events: \n";
-
-       // std::cin >> NEvents;
+       int NEvents;
+       std::cout << "Number of events: \n";
+       std::cin >> NEvents;
 
        // number of nucleons in the core of the element, e.g. 208 for Pb
-       int NNucleonsCore = 208;
-
-       // std::cout << "Number of nucleons per core: \n";
-
-       // std::cin >> NNucleonsCore;
+       int NNucleonsCore;
+       std::cout << "Number of nucleons per core: \n";
+       std::cin >> NNucleonsCore;
 
        // nucleon nucleon cross section for nucleon radius
-       PREC NNCross = 67.6;
+       PREC NNCross;
+       std::cout << "Nucleon Nucleon cross section in mb: \n";
+       std::cin >> NNCross;
 
-       // std::cout << "Nucleon Nucleon cross section in mb: \n";
-
-       // std::cin >> NNCross;
-
+       // define size of grid = elems*elems + 2 elems
        int elems = 3001;
 
-       std::cout << "Initializing the data grid" << '\n';
+       // define a start site for the integrated energy density computation
+       Site startSite(0,0);
+
+       std::cout << "Initialize Grids" << '\n';
 
        Grid<PREC> rawDataGrid(elems);
-
-       std::cout << "Initializing the energy density computation" << '\n';
-
        EnergyDensity<PREC> energDens(NNCross, rawDataGrid.getMaxSitesPerDirection());
+       IntegratedEnergyDensity<PREC> intEnergDens(startSite, energDens);
+       Eccentricity<PREC> ecc(intEnergDens);
+       FlowCoefficients<PREC> flCoeffs(intEnergDens);
 
        std::cout << "Read data " << '\n';
-
-       std::string filename = "Pb67.6_out.txt";
-
-       FileWriter<PREC> file(filename);
 
        readData(rawDataGrid, "Pb67.6.txt", NEvents, NNucleonsCore );
 
@@ -1156,36 +1166,29 @@ void computeTest(){
 
        energDens.smearedEnergyDensity();
 
-       //file.writeFileGrid(energDens.getSmearedEnergyDensData());
+       std::cout << "Write smeared energy density" << '\n';
+
+       std::string filename = "Pb67.6_out.txt";
+       FileWriter<PREC> file(filename);
        // write smeared Energy density in "Pb67.6_out.txt"
        for(int x = 0; x < rawDataGrid.getMaxSitesPerDirection(); x += 10){
               for(int y = 0; y < rawDataGrid.getMaxSitesPerDirection(); y += 10){
                      Site si(x,y);
-                     file << x << "\t" << y << "\t" << energDens.getSmearedEnergyDensData() -> getSite(si) << std::endl;
+                     file << x/100. - 15. << "\t" << y/100. -15. << "\t" << energDens.getSmearedEnergyDensData() -> getSite(si) << std::endl;
               }
        }
-       
 
        std::cout << "Compute integrations in all directions" << '\n';
-
-       Site startSite(0,0);
-
-       IntegratedEnergyDensity<PREC> intEnergDens(startSite, energDens);
 
        intEnergDens.computeIntegratedEnergyDensity();
 
        std::cout << "Compute eccentricities" << '\n';
 
-       Eccentricity<PREC> ecc(intEnergDens);
-
        ecc.computeEccentricity();
 
        std::cout << "Compute flow coefficients" << '\n';
 
-       FlowCoefficients<PREC> flCoeffs(intEnergDens);
-
        flCoeffs.computeFlowCoefficients();
-
 }
 
 // Test FileWriter
@@ -1194,9 +1197,19 @@ void FileWriterTest(){
 
        FileWriter<PREC> file("test.txt");
 
-       file << "Dies is ein Test" << std::endl;
+        Grid<PREC> grid(3001);
 
-       Grid<PREC> grid(3001);
+        readData<PREC>(grid, "Pb67.6.txt", 1, 208);
 
-       readData<PREC>(grid, "Pb67.6.txt", 1, 208);
+        std::cout << '\n' << '\n';
+        for(int x = 0; x < grid.getMaxSitesPerDirection(); x += 10){
+               for(int y = 0; y < grid.getMaxSitesPerDirection(); y += 10){
+                      Site si(x,y);
+
+                      if(grid.getSite(si) != 0){
+                            std::cout << x << "\t" << y << "\t" << grid.getSite(si) << std::endl;
+                     }
+                      file << x << "\t" << y << "\t" << grid.getSite(si) << std::endl;
+               }
+        }
 }
