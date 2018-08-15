@@ -4,7 +4,6 @@
 #include<cmath>
 #include<complex>
 #include<vector>
-#include<ctime>
 
 // floats are not available (not working with class complex)
 #define PI 3.14159265358979323846
@@ -1080,6 +1079,8 @@ class FlowCoefficients{
 };
 
 void computeMultipleEvents() {
+#pragma omp parallel
+{
        // number of events
        int NEvents = 2;
        //std::cout << "Number of events: \n";
@@ -1110,7 +1111,6 @@ void computeMultipleEvents() {
        // define a start site for the integrated energy density computation
        Site startSite(0,0);
 
-       std::cout << "Initialize Grids" << '\n';
        Grid<PREC> rawDataGrid(elems);
        EnergyDensity<PREC> energDens(NNCross, rawDataGrid.getMaxSitesPerDirection());
        IntegratedEnergyDensity<PREC> intEnergDens(startSite, energDens);
@@ -1118,54 +1118,39 @@ void computeMultipleEvents() {
        FlowCoefficients<PREC> flCoeffs(intEnergDens);
        FileReader<PREC> fr(rawDataGrid, "Pb67.6.txt");
 
+       #pragma omp for
        // loop over events
-       for (int Event = 1; Event <= NEvents; Event++) {
-              std::cout << "Computing event: " << Event << '\n';
-
-              std::cout << "Read data " << '\n';
+       for (int Event = 1; Event <= NEvents; Event++){
               fr.readData(NEvents, NNucleonsCore, Event);
 
-              std::cout << "Compute energy density" << '\n';
               energDens.energyDensity(rawDataGrid);
 
-              std::cout << "Smear energy density" << '\n';
               energDens.smearedEnergyDensity();
 
               if(Event == 1){
-                     std::cout << "Write smeared energy density" << '\n';
                      // write smeared Energy density in "EDensity.dat"
                      for(int x = 0; x < rawDataGrid.getMaxSitesPerDirection(); x += 10){
                             for(int y = 0; y < rawDataGrid.getMaxSitesPerDirection(); y += 10){
                                    Site si(x,y);
                                    file1  << x/100. - 15. << "\t"
-                                          << y/100. -15. << "\t"
+                                          << y/100. - 15. << "\t"
                                           << energDens.getSmearedEnergyDensData() -> getSite(si) << std::endl;
                             }
                      }
               }
 
-              std::cout << "Compute integrations in all directions" << '\n';
               intEnergDens.computeIntegratedEnergyDensity(NEvents);
 
-              std::cout << "Compute eccentricities" << '\n';
               ecc.computeEccentricity();
 
-              std::cout << "Write eccentricities" << '\n';
               // write eccentricities in "Eccentricities.dat"
               file3  << ecc.getEccenetricityData() -> at(0) << "\t"
                      << ecc.getEccenetricityData() -> at(1) << "\t"
                      << ecc.getEccenetricityData() -> at(2) << "\t"
                      << ecc.getEccenetricityData() -> at(3) << std::endl;
 
-              std::cout     << ecc.getEccenetricityData() -> at(0) << "\t"
-                            << ecc.getEccenetricityData() -> at(1) << "\t"
-                            << ecc.getEccenetricityData() -> at(2) << "\t"
-                            << ecc.getEccenetricityData() -> at(3) << std::endl;
-
-              std::cout << "Compute flow coefficients" << '\n';
               flCoeffs.computeFlowCoefficients();
 
-              std::cout << "Write flow coefficients" << '\n';
               // write the flow coefficients in "FourierCoef.dat";
               file4  << flCoeffs.getFlowCoefficients() -> at(0) << "\t"
                      << flCoeffs.getFlowCoefficients() -> at(1) << "\t"
@@ -1175,7 +1160,6 @@ void computeMultipleEvents() {
                      << flCoeffs.getFlowCoefficients() -> at(5) << std::endl;
 
               if(Event == NEvents){
-                     std::cout << "Write angles and integrated energy density" << '\n';
                      std::string filename2 = "Integration.dat";
                      FileWriter<PREC> file2(filename2);
                      // write angles and integrated eenergy density in "Integration.dat"
@@ -1186,17 +1170,14 @@ void computeMultipleEvents() {
               }
        }
 }
+}
 
 int main(int argc, char const *argv[]) {
-       std::clock_t start;
-
-       start = std::clock();
 
        //computeTest();
        computeMultipleEvents();
+       //runThroughGridTest(5);
        //FileReaderTest();
-
-       std::cout << ( std::clock() - start ) / (double) CLOCKS_PER_SEC << "s" << '\n';
 
        return 0;
 }
