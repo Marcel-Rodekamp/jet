@@ -284,21 +284,6 @@ class EnergyDensity{
                      Site tmpSite(0,0);
                      const int tmpRadNucleon = (int) _RadNucleon;
 
-                     // test site (0,0)
-                     if (_grid.getSite(site) != 0 ) {
-
-                            // loop through a square with side length tmpRadNucleon centered on the
-                            // not zero site
-                            for(int x = site.x() - tmpRadNucleon; x < site.x() + tmpRadNucleon; x++){
-                            for(int y = site.y() - tmpRadNucleon; y < site.y() + tmpRadNucleon; y++){
-                                   tmpSite.setX(x);
-                                   tmpSite.setY(y);
-                                   _gridSmeared.addSite(tmpSite,_grid.getSite(site));
-                            }
-                            }
-                     }
-
-
                      do{
                             if (_grid.getSite(site) != 0 ) {
                                    // loop through a square with side length tmpRadNucleon centered on the
@@ -312,6 +297,7 @@ class EnergyDensity{
                                    }
                             }
                      }while( _grid.runThroughGrid(site));
+
               }
 
 
@@ -1079,23 +1065,23 @@ class FlowCoefficients{
 };
 
 void computeMultipleEvents() {
-#pragma omp parallel
-{
        // number of events
-       int NEvents = 2;
-       //std::cout << "Number of events: \n";
-       //std::cin >> NEvents;
+       int NEvents;
+       std::cout << "Number of events: \n";
+       std::cin >> NEvents;
 
        // number of nucleons in the core of the element, e.g. 208 for Pb
-       int NNucleonsCore = 208;
-       //std::cout << "Number of nucleons per core: \n";
-       //std::cin >> NNucleonsCore;
+       int NNucleonsCore;
+       std::cout << "Number of nucleons per core: \n";
+       std::cin >> NNucleonsCore;
 
        // nucleon nucleon cross section for nucleon radius
-       PREC NNCross = 67.6;
-       //std::cout << "Nucleon Nucleon cross section in mb: \n";
-       //std::cin >> NNCross;
+       PREC NNCross;
+       std::cout << "Nucleon Nucleon cross section in mb: \n";
+       std::cin >> NNCross;
 
+#pragma omp parallel
+{
        // define size of grid = elems*elems + 2 elems
        int elems = 3001;
 
