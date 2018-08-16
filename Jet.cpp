@@ -147,7 +147,7 @@ class FileWriter{
                          _fileStream.open(_fileName.c_str());
 
                           if(!_fileStream.is_open()){
-                                 std::cout << "File could not be opened" << '\n';
+                                 std::cout << "Error@FileWriter:File could not be opened" << '\n';
                                  return;
                           }
 
@@ -192,7 +192,7 @@ class FileReader{
                   _fileStream.open(_fileName.c_str(),std::ios::in);
 
                    if(!_fileStream.is_open()){
-                          std::cout << "File could not be opened" << '\n';
+                          std::cout << "Error@FileReader:File could not be opened" << '\n';
                           return;
                    }
 
@@ -1080,8 +1080,6 @@ void computeMultipleEvents() {
        std::cout << "Nucleon Nucleon cross section in mb: \n";
        std::cin >> NNCross;
 
-#pragma omp parallel
-{
        // define size of grid = elems*elems + 2 elems
        int elems = 3001;
 
@@ -1104,6 +1102,8 @@ void computeMultipleEvents() {
        FlowCoefficients<PREC> flCoeffs(intEnergDens);
        FileReader<PREC> fr(rawDataGrid, "Pb67.6.txt");
 
+#pragma omp parallel
+{
        #pragma omp for
        // loop over events
        for (int Event = 1; Event <= NEvents; Event++){
