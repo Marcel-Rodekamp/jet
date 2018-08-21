@@ -1,4 +1,5 @@
 #include<iostream>
+#include<iomanip>
 #include<fstream>
 #include<stdlib.h>
 #include<cmath>
@@ -21,12 +22,13 @@ template<class floatT> class Eccentricity;
 template<class floatT> class FlowCoefficients;
 
 
-void indexerTest(int max);
-void runThroughGridTest(int max);
-void computeTest();
-void FileWriterTest();
-void FileReaderTest();
-void computeMultipleEvents();
+void testIndexer(int max);
+void testRunThroughGrid(int max);
+void testCompute();
+void testFileWriter(int elems, PREC NNCross, int NNucleonsCore, int NEvents);
+void testFileReader();
+void testReadWrite();
+void testIntegratedEnergyDensity();
 
 // structure to define the lattice points leaving out the z component due to the contemplated event plane
 class Site{
@@ -70,6 +72,9 @@ class Site{
 
               void inline setY(int newY){
                      VCoordinates.at(1) = newY;
+              }
+              void inline printSite(){
+                     std::cout << "(" << this -> x() << "," << this -> y() << ") \t";
               }
 };
 
@@ -149,7 +154,7 @@ class FileWriter{
                          _fileStream.open(_fileName.c_str());
 
                           if(!_fileStream.is_open()){
-                                 std::cout << "Error@FileWriter:File could not be opened" << '\n';
+                                 std::cerr << "Error@FileWriter:File could not be opened" << '\n';
                                  return;
                           }
 
@@ -164,7 +169,7 @@ class FileWriter{
               FileWriter(std::string fname) :
                             _fileName(fname) {
                      init();
-              };
+              }
 
               std::ofstream & operator<< (const floatT &obj) {
                      _fileStream << obj;
@@ -186,7 +191,7 @@ template<class floatT>
 class FileReader{
        private:
            const std::string _fileName;
-           std::fstream _fileStream;
+           std::ifstream _fileStream;
            std::vector<int> _data;
 
            //! initializes class, automatically called by constructors
@@ -194,7 +199,7 @@ class FileReader{
                   _fileStream.open(_fileName.c_str(),std::ios::in);
 
                    if(!_fileStream.is_open()){
-                          std::cout << "Error@FileReader:File could not be opened" << '\n';
+                          std::cerr << "Error@FileReader:File could not be opened" << '\n';
                           return;
                    }
            }
@@ -204,29 +209,37 @@ class FileReader{
        FileReader(int NEvents, int NNucleonsCore, std::string fname) :
                      _fileName(fname),
                      // 2 * Nucleons * Events * Values to store
-                     _data(3 * 2 * NNucleonsCore * NEvents)
-                                          {
-              init();
+                     _data(3 * 2 * NNucleonsCore * NEvents){
+
+              //init();
        };
 
        void readData(int NEvents, int NNucleonsCore){
+               std::ifstream _fileStream;
+                _fileStream.open(_fileName.c_str(),std::ios::in);
+
               std::vector<floatT> row(4);
 
               // loop through the data file which format is clarified by
               // x corrd \t y coord \t z coord \t NColl
               for(int i = 0; i < 2 * 3 * NEvents * NNucleonsCore; i += 3){
-                     for(int col = 0; col < 4 ; ++col) {
-                            _fileStream >> row[col];
+                     for(int col = 0; col < 4 ; col++) {
+                            _fileStream >> row.at(col);
                      }
 
                      // translate the euclidean coordinates into the grid coordinates
                      // leaving out the z component
-                     int x = (row[0] + 15)*100;
-                     int y = (row[1] + 15)*100;
+                     int x = (row.at(0) + 15)*100;
+                     int y = (row.at(1) + 15)*100;
 
                      _data.at(i) = x;
                      _data.at(i+1) = y;
-                     _data.at(i+2) = row[3];
+                     _data.at(i+2) = row.at(3);
+
+                     row.at(0) = 0.;
+                     row.at(1) = 0.;
+                     row.at(2) = 0.;
+                     row.at(3) = 0.;
               }
        }
        void getData(int event, int NNucleonsCore, Grid<floatT> & grid){
@@ -234,7 +247,14 @@ class FileReader{
               for(int i = 3 * 2 * (event - 1) * NNucleonsCore; i < 3 * 2 * event * NNucleonsCore; i += 3){
                      site.setX(_data.at(i));
                      site.setY(_data.at(i+1));
+
+                     if(_data.at(i) > grid.getMaxSitesPerDirection() || _data.at(i+1) > grid.getMaxSitesPerDirection()){
+                            std::cerr << "Error@getData: Nucleon out of grid with: " << _data.at(i+2) << '\n';
+                            continue;
+                     }
+
                      grid.setSite(site, _data.at(i+2));
+
               }
        }
 
@@ -280,14 +300,33 @@ class EnergyDensity{
               void smearedEnergyDensity(){
                      Site site(0, 0);
                      Site tmpSite(0,0);
+                     // TODO this is not so nice!
                      const int tmpRadNucleon = (int) _RadNucleon;
 
                      do{
                             if (_grid.getSite(site) != 0 ) {
+                                   //site.printSite();
                                    // loop through a square with side length tmpRadNucleon centered on the
                                    // not zero site
                                    for(int x = site.x() - tmpRadNucleon; x < site.x() + tmpRadNucleon; x++){
+                                          if(x < 0){
+                                                 std::cerr << "Error@smearedEnergyDensity: x value to small" << '\n';
+                                                 return ;
+                                          }
+                                          if(x > _gridSmeared.getMaxSitesPerDirection()){
+                                                 std::cerr << "Error@smearedEnergyDensity: x value to big" << '\n';
+                                                 return ;
+                                          }
                                    for(int y = site.y() - tmpRadNucleon; y < site.y() + tmpRadNucleon; y++){
+                                          if(y < 0){
+                                                 std::cerr << "Error@smearedEnergyDensity: y value to small" << '\n';
+                                                 return ;
+                                          }
+                                          if(y > _gridSmeared.getMaxSitesPerDirection()){
+                                                 std::cerr << "Error@smearedEnergyDensity: y value to big" << '\n';
+                                                 return ;
+                                          }
+
                                           tmpSite.setX(x);
                                           tmpSite.setY(y);
                                           _gridSmeared.addSite(tmpSite,_grid.getSite(site));
@@ -298,7 +337,6 @@ class EnergyDensity{
 
               }
 
-
               Grid<floatT> * getSmearedEnergyDensData(){
                      return & _gridSmeared;
               }
@@ -308,6 +346,7 @@ class EnergyDensity{
 };
 
 //TODO _realX usw in eine Site verwandeln
+//TODO get rid of the sector computation and move it on the grid -> huge speed up
 template<class floatT>
 class IntegratedEnergyDensity{
        private:
@@ -383,6 +422,7 @@ class IntegratedEnergyDensity{
                      		if(interCoordy < _smearEnerDensGrid.getMaxSitesPerDirection()
                                           && interCoordy >= 0.0) {
 
+
                                           // find the four gridpoints {(x1,y1),(x2,y1),(x1,y2),(x2,y2)}
                                           // for the interpolation around a point (x,y)
                      			interCoordx_1 = (int) std::floor((floatT) interCoordx);
@@ -411,6 +451,8 @@ class IntegratedEnergyDensity{
 
                                           // store point at line and the interpolated value at that point
                      			_RadiusOne.at(interCoordx - _JetStartX) = distFromJetStart;
+
+
 
                      			_EDensOne.at(interCoordx - _JetStartX) = Interpol;
                      		}
@@ -447,6 +489,7 @@ class IntegratedEnergyDensity{
 
                      // store the values for the angle and the integral vectors
                      _AngleSec1.at(step) = PhiOne;
+
                      _EDensSec1.at(step) = Integral;
 
                      angleAlpha += _AngleStep;
@@ -751,15 +794,14 @@ class IntegratedEnergyDensity{
 
               void _angles() {
                      for (int i = 0; i < Steps; i++) {
-                            _AngleSec1.at(Steps+i) = _AngleSec2.at(i);
+                            _AngleSec1.at(Steps+i) = _AngleSec3.at(i);
                      }
                      for (int i = 0; i < Steps; i++) {
-                            _AngleSec1.at(2*Steps+i) = _AngleSec3.at(i);
+                            _AngleSec1.at(2*Steps+i) = _AngleSec2.at(i);
                      }
                      for (int i = 0; i < Steps; i++) {
                             _AngleSec1.at(3*Steps+i) = _AngleSec4.at(i);
                      }
-
               }
 
               // bilinear interpolation function between the grid points in the energy density grid
@@ -789,15 +831,15 @@ class IntegratedEnergyDensity{
               floatT inline _integralNormalization() {
                      // normalization of the integral by summing the value of the integrals
                      // for all angles phi of one event
-                     floatT IntegralNormalization = 0.;
+                     floatT IntegralNormalization = 0.0;
 
                      for(int i = 0; i < Steps; i++){
-                            IntegralNormalization += (  _EDensSec1.at(i)
+                            IntegralNormalization += ( _EDensSec1.at(i)
                                                      + _EDensSec2.at(i)
                                                      + _EDensSec3.at(i)
                                                      + _EDensSec4.at(i));
-                     }
 
+                     }
                      return IntegralNormalization;
               }
 
@@ -805,8 +847,8 @@ class IntegratedEnergyDensity{
                      floatT IntegralNormalization = _integralNormalization();
                      for (int i = 0; i < Steps; i++) {
                             _Integral.at(i) += _EDensSec1.at(i) / (IntegralNormalization * NEvents);
-                            _Integral.at(Steps + i) += _EDensSec2.at(i) / (IntegralNormalization * NEvents);
-                            _Integral.at(2 * Steps + i) += _EDensSec3.at(i) / (IntegralNormalization * NEvents);
+                            _Integral.at(Steps + i) += _EDensSec3.at(i) / (IntegralNormalization * NEvents);
+                            _Integral.at(2 * Steps + i) += _EDensSec2.at(i) / (IntegralNormalization * NEvents);
                             _Integral.at(3 * Steps + i) += _EDensSec4.at(i) / (IntegralNormalization * NEvents);
                      }
               }
@@ -855,7 +897,7 @@ class IntegratedEnergyDensity{
                                                                - newEnergDens.getSmearedEnergyDensData()
                                                                -> getMaxSitesPerDirection())) {}
 
-       void computeIntegratedEnergyDensity(int NEvents){
+              void computeIntegratedEnergyDensity(int NEvents){
               // compute the integrated energy density in each sector
               _sector1();
               _sector2();
@@ -869,18 +911,19 @@ class IntegratedEnergyDensity{
               _angles();
        }
 
-       std::vector<floatT> * getIntegrationEDensValAngles() {
+              std::vector<floatT> * getIntegrationEDensValAngles() {
               return & _AngleSec1;
        }
 
-       std::vector<floatT> * getIntegrationEDensValIntegrals() {
-              return & _Integral;
-       }
+              std::vector<floatT> * getIntegrationEDensValIntegrals() {
+                     return & _Integral;
+              }
 
               friend class Eccentricity<floatT>;
               friend class FlowCoefficients<floatT>;
 };
 
+//TODO get rid of the sectors!!!
 template<class floatT>
 class Eccentricity{
        private:
@@ -908,11 +951,10 @@ class Eccentricity{
                                                         * std::pow(radius.at(j + 1),(n + 1)))
                                                         * std::exp(I * ((floatT) n ) * angle.at(i));
 
-                                          _EccDenom.at(n - 2) += 0.5 * (radius.at(j + 1) - radius.at(j))
-                                                        * (eneDens.at(j)
-                                                               * std::pow(radius.at(j),(n + 1))
-                                                               + eneDens.at(j + 1)
-                                                               * std::pow(radius.at(j + 1),(n + 1)));
+                                          _EccDenom.at(n - 2) += (floatT) 0.5 * (radius.at(j + 1) - radius.at(j))
+                                                        * (floatT) (eneDens.at(j) * std::pow(radius.at(j),(n + 1))
+                                                        + eneDens.at(j + 1)
+                                                        * std::pow(radius.at(j + 1),(n + 1)));
                                    }
                             }
                      }
@@ -941,7 +983,6 @@ class Eccentricity{
                             _EccCounter.at(n) = 0;
                             _EccDenom.at(n) = 0;
                      }
-
               }
 
        public:
@@ -973,15 +1014,17 @@ class FlowCoefficients{
               IntegratedEnergyDensity<floatT> & _intEnergDens;
 
               // merged vectors
+              // the order of the sectors is adapted to a mathematical positive integration direction
+              // sector 1 --> sector3 --> sector2 --> sector 4
               void _mergeVectors() {
                      for(int i = 0; i < Steps; i++) {
                             _MergedAngles.at(i) = _intEnergDens._AngleSec1.at(i);
                      }
                      for(int i = 0; i < Steps; i++) {
-                            _MergedAngles.at(Steps + i) = _intEnergDens._AngleSec2.at(i);
+                            _MergedAngles.at(Steps + i) = _intEnergDens._AngleSec3.at(i);
                      }
                      for(int i = 0; i < Steps; i++) {
-                            _MergedAngles.at(2 * Steps + i) = _intEnergDens._AngleSec3.at(i);
+                            _MergedAngles.at(2 * Steps + i) = _intEnergDens._AngleSec2.at(i);
                      }
                      for(int i = 0; i < Steps; i++) {
                             _MergedAngles.at(3 * Steps + i) = _intEnergDens._AngleSec4.at(i);
@@ -991,10 +1034,10 @@ class FlowCoefficients{
                             _MergedIntegrals.at(i) = _intEnergDens._EDensSec1.at(i);
                      }
                      for(int i = 0; i < Steps; i++) {
-                            _MergedIntegrals.at(Steps + i) = _intEnergDens._EDensSec2.at(i);
+                            _MergedIntegrals.at(Steps + i) = _intEnergDens._EDensSec3.at(i);
                      }
                      for(int i = 0; i < Steps; i++) {
-                            _MergedIntegrals.at(2 * Steps + i) = _intEnergDens._EDensSec3.at(i);
+                            _MergedIntegrals.at(2 * Steps + i) = _intEnergDens._EDensSec2.at(i);
                      }
                      for(int i = 0; i < Steps; i++) {
                             _MergedIntegrals.at(3 * Steps + i) = _intEnergDens._EDensSec4.at(i);
@@ -1088,9 +1131,6 @@ void computeMultipleEvents( Grid<PREC> & rawDataGrid,
 
 int main(int argc, char const *argv[]) {
 
-       PREC tstart = clock();
-       PREC tend = 0;
-
        // number of events
        int NEvents;
        std::cout << "Number of events: \n";
@@ -1122,71 +1162,59 @@ int main(int argc, char const *argv[]) {
        FileWriter<PREC> file4(filename4);
 
        std::vector<PREC> globalIntegral(4*Steps);
-       std::vector<PREC> * globalAngle;
+       std::vector<PREC> globalAngle(4*Steps);
 
-       #pragma omp parallel
-       {
+       #pragma omp parallel for
+       for (int Event = 1; Event <= NEvents; Event++) {
+              std::cout << Event << '\n';
               Grid<PREC> rawDataGrid(elems);
-
               EnergyDensity<PREC> energDens(NNCross, elems);
               IntegratedEnergyDensity<PREC> intEnergDens(startSite, energDens);
               Eccentricity<PREC> ecc(intEnergDens);
               FlowCoefficients<PREC> flCoeffs(intEnergDens);
-
-              #pragma omp for
-              for (int Event = 1; Event <= NEvents; Event++) {
-                     //std::cout << Event << '\n';
-
-                     fr.getData(Event, NNucleonsCore, rawDataGrid);
-
-                     computeMultipleEvents(rawDataGrid, fr, energDens, intEnergDens, ecc, flCoeffs, Event, NEvents, NNucleonsCore, NNCross);
-
-                     // write eccentricities in "Eccentricities.dat"
-                     file3  << ecc.getEccenetricityData() -> at(0) << "\t"
-                            << ecc.getEccenetricityData() -> at(1) << "\t"
-                            << ecc.getEccenetricityData() -> at(2) << "\t"
-                            << ecc.getEccenetricityData() -> at(3) << std::endl;
-
-                     // write the flow coefficients in "FourierCoef.dat";
-                     file4  << flCoeffs.getFlowCoefficients() -> at(0) << "\t"
-                            << flCoeffs.getFlowCoefficients() -> at(1) << "\t"
-                            << flCoeffs.getFlowCoefficients() -> at(2) << "\t"
-                            << flCoeffs.getFlowCoefficients() -> at(3) << "\t"
-                            << flCoeffs.getFlowCoefficients() -> at(4) << "\t"
-                            << flCoeffs.getFlowCoefficients() -> at(5) << std::endl;
-
-                     // write one example smeared energy density
-                     if(Event == 1){
-                            std::string filename1 = "EDensity.dat";
-                            FileWriter<PREC> file1(filename1);
-
-                            // write smeared Energy density in "EDensity.dat"
-                            Site site(0,0);
-                            do{
-                                   file1  << site.x()/100. - 15. << "\t"
-                                          << site.y()/100. - 15. << "\t"
-                                          << energDens.getSmearedEnergyDensData() -> getSite(site) << std::endl;
-                            }while(energDens.getSmearedEnergyDensData() -> runThroughGrid(site));
-                            globalAngle = intEnergDens.getIntegrationEDensValAngles();
-                     }
-              }
-
+              #pragma omp critical
+              fr.getData(Event, NNucleonsCore, rawDataGrid);
+              computeMultipleEvents(rawDataGrid, fr, energDens, intEnergDens, ecc, flCoeffs, Event, NEvents, NNucleonsCore, NNCross);
               #pragma omp critical
               for (int i = 0; i < 4*Steps; i++) {
                      globalIntegral.at(i) += intEnergDens.getIntegrationEDensValIntegrals() -> at(i);
               }
+              // write eccentricities in "Eccentricities.dat"
+              file3 << Event << "\t"  << ecc.getEccenetricityData() -> at(0) << "\t"
+                     << ecc.getEccenetricityData() -> at(1) << "\t"
+                     << ecc.getEccenetricityData() -> at(2) << "\t"
+                     << ecc.getEccenetricityData() -> at(3) << std::endl;
+              // write the flow coefficients in "FourierCoef.dat";
+              file4  << flCoeffs.getFlowCoefficients() -> at(0) << "\t"
+                     << flCoeffs.getFlowCoefficients() -> at(1) << "\t"
+                     << flCoeffs.getFlowCoefficients() -> at(2) << "\t"
+                     << flCoeffs.getFlowCoefficients() -> at(3) << "\t"
+                     << flCoeffs.getFlowCoefficients() -> at(4) << "\t"
+                     << flCoeffs.getFlowCoefficients() -> at(5) << std::endl;
+              // write one example smeared energy density
+              if(Event == 1){
+                     std::string filename1 = "EDensity.dat";
+                     FileWriter<PREC> file1(filename1);
+                     // write smeared Energy density in "EDensity.dat"
+                     Site site(0,0);
+                     do{
+                            file1  << site.x()/100. - 15. << "\t"
+                                   << site.y()/100. - 15. << "\t"
+                                   << energDens.getSmearedEnergyDensData() -> getSite(site) << std::endl;
+                     }while(energDens.getSmearedEnergyDensData() -> runThroughGrid(site));
+                     globalAngle = * intEnergDens.getIntegrationEDensValAngles();
+              }
        }
+
        std::string filename2 = "Integration.dat";
        FileWriter<PREC> file2(filename2);
 
-       // write angles and integrated eenergy density in "Integration.dat"
+       // write angles and integrated energy density in "Integration.dat"
        for (int i = 0; i < 4 * Steps; i++) {
-              file2  << globalAngle -> at(i) << "\t"
+              file2  << globalAngle.at(i) << "\t"
                      << globalIntegral.at(i) << std::endl;
        }
 
-       tend = clock() - tstart;
-       std::cout << "time >" << tend/(CLOCKS_PER_SEC * 4) << '\n';
        return 0;
 }
 
@@ -1194,7 +1222,7 @@ int main(int argc, char const *argv[]) {
 
 // Testing routins
 // Test indexer:
-void indexerTest(int max){
+void testIndexer(int max){
        Grid<PREC> grid(max);
 
        std::cout << "xyz" << '\n';
@@ -1221,7 +1249,7 @@ void indexerTest(int max){
 }
 
 //Test runThroughGrid()
-void runThroughGridTest(int max){
+void testRunThroughGrid(int max){
        Grid<PREC> grid(max);
 
        std::cout << "runThroughGrid(Site)" << '\n';
@@ -1242,27 +1270,80 @@ void runThroughGridTest(int max){
        }
 }
 
-// Test FileWriter
-void FileWriterTest(){
+// test file read and write
+void testReadWrite() {
+       int NEvents = 200;
+       int NNucleonsCore = 208;
 
-        Grid<PREC> grid(3001);
+       int elems = 3001;
 
-        FileReader<PREC> fr(5, 208, "Pb67.6.txt");
+       Site startSite(0,0);
 
-        fr.readData(5, 208);
+       FileReader<PREC> fr(NEvents, NNucleonsCore, "Pb67.6.txt");
+       fr.readData(NEvents, NNucleonsCore);
 
-        fr.getData(5, 208, grid);
+       std::string dataReadWrite = "ReadWrite.dat";
+       FileWriter<PREC> writeData(dataReadWrite);
 
-        Site site(0,0);
-        do{
-              if(grid.getSite(site) != 0){
-                     std::cout << site.x()/100. - 15 << "\t" << site.y()/100. - 15 << "\t" << grid.getSite(site) << '\n';
+       for (int Event = 1; Event <= NEvents; Event++) {
+              std::cout << Event << '\n';
+
+              Grid<PREC> rawDataGrid(elems);
+              fr.getData(Event, NNucleonsCore, rawDataGrid);
+
+              for (int x = 0; x < elems; x++) {
+                     for (int y = 0; y < elems; y++) {
+                            Site site(x,y);
+                            if(rawDataGrid.getSite(site) != 0){
+                            writeData << (x/100.) - 15 << "\t" <<  (y/100.) - 15 << "\t" << rawDataGrid.getSite(site) << "\n";
+                            }
+                     }
               }
-        }while(grid.runThroughGrid(site));
+
+
+       }
+
+
 }
 
-//
-void FileReaderTest(){
+// Test FileWriter
+void testFileWriter(int elems, PREC NNCross, int NNucleonsCore, int NEvents){
+       Site startSite(0,0);
+
+       FileReader<PREC> fr(NEvents, NNucleonsCore, "Pb67.6.txt");
+       fr.readData(NEvents, NNucleonsCore);
+
+       std::string test = "T1.dat";
+       FileWriter<PREC> test1(test);
+
+              #pragma omp parallel for
+              for (int Event = 1; Event <= NEvents; Event++) {
+                     std::cout << Event << '\n';
+                     Grid<PREC> rawDataGrid(elems);
+                     fr.getData(Event, NNucleonsCore, rawDataGrid);
+
+                     EnergyDensity<PREC> energDens(NNCross, elems);
+                     IntegratedEnergyDensity<PREC> intEnergDens(startSite, energDens);
+                     Eccentricity<PREC> ecc(intEnergDens);
+
+                     energDens.energyDensity(rawDataGrid);
+
+                     energDens.smearedEnergyDensity();
+
+                     intEnergDens.computeIntegratedEnergyDensity(NEvents);
+
+                     ecc.computeEccentricity();
+
+                     test1 << Event << "\t" << ecc.getEccenetricityData() -> at(0) << "\t"
+                            << ecc.getEccenetricityData() -> at(1) << "\t"
+                            << ecc.getEccenetricityData() -> at(2) << "\t"
+                            << ecc.getEccenetricityData() -> at(3) << std::endl;
+              }
+
+}
+
+// Test file reader test
+void testFileReader(){
        // number of events
        int NEvents = 5;
 
@@ -1296,4 +1377,75 @@ void FileReaderTest(){
               }
        } while(rawDataGrid2.runThroughGrid(s3));
 
+}
+
+// Test Integrated Energy Density
+void testIntegratedEnergyDensity(){
+       int elems = 3001;
+
+       //define some parameter which are necessary for the computation. For the testing purpose they can be random.
+       PREC NNCross = 67.6;
+       int NEvents = 102;
+       int NNucleonsCore = 208;
+
+       Site site(0,0);
+
+       //you can varie this for testing purpose
+       Site startSite(0,0);
+
+       //fill the grid with values
+       FileReader<PREC> fr(NEvents, NNucleonsCore, "Pb67.6.txt");
+       fr.readData(NEvents, NNucleonsCore);
+
+       //do the test often
+       //#pragma omp parallel for
+       for(int event = 100; event <= NEvents; event++){
+              Grid<PREC> grid(elems);
+              std::cout << event << '\n';
+
+              fr.getData(event, NNucleonsCore, grid);
+
+              Site si(0,0);
+              do{
+                     if(grid.getSite(si)  != 0){
+                            si.printSite();
+                            std::cout << grid.getSite(si) << '\n';
+                     }
+              }while(grid.runThroughGrid(si));
+
+              //the Integrated energy density needs a energy density which needs to have no bugs, tested before!
+              EnergyDensity<PREC> energDens(NNCross, elems);
+
+              energDens.energyDensity(grid);
+
+              energDens.smearedEnergyDensity();
+
+              IntegratedEnergyDensity<PREC> intEnergDens(startSite, energDens);
+
+              intEnergDens.computeIntegratedEnergyDensity(NEvents);
+
+              Eccentricity<PREC> ecc(intEnergDens);
+
+              ecc.computeEccentricity();
+
+              for (size_t i = 0; i < 4*Steps; i++) {
+                     if((*intEnergDens.getIntegrationEDensValIntegrals())[i]
+                            != (*intEnergDens.getIntegrationEDensValIntegrals())[i]){
+                     //std::cout << i << "\t" << (*intEnergDens.getIntegrationEDensValIntegrals())[i] << '\n';
+                     }
+              }
+
+              if(ecc.getEccenetricityData() -> at(0) != ecc.getEccenetricityData() -> at(0)){
+              //       std::cout << ecc.getEccenetricityData() -> at(0);
+              }
+              if(ecc.getEccenetricityData() -> at(1) != ecc.getEccenetricityData() -> at(1)){
+              //       std::cout << ecc.getEccenetricityData() -> at(1);
+              }
+              if(ecc.getEccenetricityData() -> at(2) != ecc.getEccenetricityData() -> at(2)){
+              //       std::cout << ecc.getEccenetricityData() -> at(2);
+              }
+              if(ecc.getEccenetricityData() -> at(3) != ecc.getEccenetricityData() -> at(3)){
+              //       std::cout << ecc.getEccenetricityData() -> at(3) << '\n';
+              }
+       }
 }
