@@ -336,8 +336,6 @@ class EnergyDensity{
                      return & _gridSmeared;
               }
 
-              friend class IntegratedEnergyDensity<floatT>;
-              friend class MeanStartingPoint<floatT>;
               friend class Eccentricity<floatT>;
 };
 
@@ -427,7 +425,7 @@ class Eccentricity{
                                    }
                             }
                      }
-                     _Ecc2 = std::abs(IntNumerator / IntDenominator);
+                     _Ecc2 = std::abs(IntNominator / IntDenominator);
               }
 
               // compute the ecc3
