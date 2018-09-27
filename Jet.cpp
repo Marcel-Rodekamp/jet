@@ -1,3 +1,9 @@
+/*****************************************************************************************
+**	Calculation of participant plane eccentricities with Glauber Monte Carlo ansatz  **
+**	(TGlauberMC) for high-energy heavy-ion collisions				    **
+**	Copyright Hendrik Roch	(2018) (hroch@physik.uni-bielefeld.de)		    **
+*****************************************************************************************/
+
 #include<iostream>
 #include<iomanip>
 #include<fstream>
