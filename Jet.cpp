@@ -1,8 +1,21 @@
 /*****************************************************************************************
-**	Calculation of participant plane eccentricities with Glauber Monte Carlo ansatz  **
-**	(TGlauberMC) for high-energy heavy-ion collisions				    **
-**	Copyright Hendrik Roch	(2018) (hroch@physik.uni-bielefeld.de)		    **
+**	Calculation of participant plane eccentricities with Glauber monte carlo ansatz  **
+**	(TGlauberMC) for high-energy heavy-ion collisions           			    **
+**	Copyright Hendrik Roch	(2018-now) (hroch@physik.uni-bielefeld.de)	    **
 *****************************************************************************************/
+/*
+------------------------------------------------------------------------------------------
+v1.2:  Update with implementation of a different definition for the eccentricity
+       \epsilon_{n,p} = <r^p*e^{I*n*\phi}> / <r^p> in a second eccentricity class
+------------------------------------------------------------------------------------------
+v1.1:  Update with implementation of participant scaling and mixed scaling.
+------------------------------------------------------------------------------------------
+v1.0:  First version for calculation of the energy density with collision scaling and
+       the eccentricities e2 - e6.
+       The first version of the code was created with
+       programming support from Marcel Rodekamp.
+------------------------------------------------------------------------------------------
+*/
 
 #include<iostream>
 #include<iomanip>
@@ -23,11 +36,16 @@ template<class floatT> class Grid;
 template<class floatT> class FileWriter;
 template<class floatT> class EnergyDensity;
 template<class floatT> class Eccentricity;
+template<class floatT> class EccentricityNP;
+template<class floatT> class MeanStartingPoint;
+
 
 void testIndexer(int max);
 void testRunThroughGrid(int max);
-void testReadWrite();
+void testCompute();
+void testFileWriter(int elems, PREC NNCross, int NNucleonsCore, int NEvents);
 void testFileReader();
+void testReadWrite();
 
 // structure to define the lattice points leaving out the z component due to the contemplated event plane
 class Site{
@@ -88,7 +106,7 @@ class Grid{
               // number of sites in the 3 spartial directions (only cubic grids are allowed)
               int _maxSitesPerDirection;
        public:
-              // constructor
+              //constructor
               Grid(int maxSitesPerDirection) :
                                    _VData( 2*maxSitesPerDirection
                                           + maxSitesPerDirection*maxSitesPerDirection
@@ -150,7 +168,7 @@ class FileWriter{
                   const std::string _fileName;
                   std::ofstream _fileStream;
 
-                  // initializes class, automatically called by constructors
+                  //! initializes class, automatically called by constructors
                   void init() {
                          _fileStream.open(_fileName.c_str());
 
@@ -158,6 +176,10 @@ class FileWriter{
                                  std::cerr << "Error@FileWriter:File could not be opened" << '\n';
                                  return;
                           }
+
+                         // set high precision
+                         // _fileStream.precision(15);
+                         // _fileStream.setf(std::ios::scientific);
                   }
 
        public:
@@ -178,7 +200,7 @@ class FileWriter{
                      return _fileStream;
               }
 
-              // Close the ostream
+              //! Close the ostream
               ~FileWriter() {
                      _fileStream.close();
               }
@@ -192,7 +214,7 @@ class FileReader{
            std::ifstream _fileStream;
            std::vector<int> _data;
 
-           // initializes class, automatically called by constructors
+           //! initializes class, automatically called by constructors
            void init() {
                   _fileStream.open(_fileName.c_str(),std::ios::in);
 
@@ -273,28 +295,73 @@ class EnergyDensity{
 
        public:
               // constructor
-              EnergyDensity(floatT newNNCross, int elems) : _grid(elems) , _gridSmeared(elems),
-                                   _NNCross(newNNCross), _RadNucleon((std::sqrt(newNNCross)*0.178412/2.)*100) {}
-                                                         // factor 1/2 convention from [arXiv:1710.07098]
-                                                         // the factor 0.178412 is a conversion factor
-                                                         // from cross section to radius in fm.
-                                                         // the factor 100 is necessary due to the grid steps
+              EnergyDensity(floatT newNNCross, int elems, int ScalingParameter) :
+                            _grid(elems),
+                            _gridSmeared(elems),
+                            _NNCross(newNNCross),
+                            _RadNucleon((std::sqrt(newNNCross)*0.178412/2.)*100) {}
+              // factor 1/2 convention from [arXiv:1710.07098]
+              // the factor 0.178412 is a conversion factor
+              // from cross section to radius in fm.
+              // the factor 100 is necessary due to the grid steps
 
               // calculate energy density in MeV from NColl
-              // (15.0 -> C. Schmidt, 800.0 in hot spots -> N. Borghini & U. Heinz)
-              void energyDensity(Grid<floatT> & grid){
+              // (15.0 -> C. Schmidt, 800.0 MeV in hot spots -> N. Borghini & U. Heinz)
+              void energyDensity(Grid<floatT> & grid, int ScalingParameter){
                      floatT EDens = 0;
                      Site site(0,0);
                      int NColl;
 
-                     do{
-                            NColl = (int) grid.getSite(site);
+                     // scaling with N_coll
+                     if (ScalingParameter == 1) {
+                            do{
+                                   NColl = (int) grid.getSite(site);
 
-                            // (15*800/46^4) * NColl^4
-                            EDens = 0.002680093338717343 * NColl * NColl * NColl * NColl;
+                                   // 15 * (N(x,y) / N_{tot,max}) * T^4, with N_{tot,max} ~ 30
+                                   EDens = 26665.45 * NColl;
 
-                            _grid.setSite(site,EDens);
-                     }while(grid.runThroughGrid(site));
+                                   _grid.setSite(site,EDens);
+                            }while(grid.runThroughGrid(site));
+                     }
+
+                     // scaling with N_part
+                     if (ScalingParameter == 2) {
+                            do{
+                                   int Participant;
+                                   NColl = (int) grid.getSite(site);
+                                   if (NColl >= 1) {
+                                          Participant = 1;
+                                   }
+                                   else{
+                                          Participant = 0;
+                                   }
+
+                                   // 15 * (N(x,y) / N_{tot,max}) * T^4, with N_{tot,max} ~ 30
+                                   EDens = 26665.45 * Participant;
+
+                                   _grid.setSite(site,EDens);
+                            }while(grid.runThroughGrid(site));
+                     }
+
+                     // mixed scaling e(x,y) = 0.85*N_part + 0.15*N_coll [arXix:1112.2761]
+                     if (ScalingParameter == 3) {
+                            do{
+                                   int Participant;
+                                   NColl = (int) grid.getSite(site);
+                                   if (NColl >= 1) {
+                                          Participant = 1;
+                                   }
+                                   else{
+                                          Participant = 0;
+                                   }
+
+                                   // 15 * (N(x,y) / N_{tot,max}) * T^4, with N_{tot,max} ~ 30
+                                   EDens = 26665.45 *
+                                          (0.85 * Participant + 0.15 * NColl);
+
+                                   _grid.setSite(site,EDens);
+                            }while(grid.runThroughGrid(site));
+                     }
               }
 
               void smearedEnergyDensity(){
@@ -341,6 +408,71 @@ class EnergyDensity{
               Grid<floatT> * getSmearedEnergyDensData(){
                      return & _gridSmeared;
               }
+              friend class MeanStartingPoint<floatT>;
+              friend class Eccentricity<floatT>;
+};
+
+template<class floatT>
+class MeanStartingPoint{
+       private:
+              Grid<floatT> & _smearEnerDensGrid;
+
+              floatT _meanX;
+              floatT _meanY;
+
+              void _calculateMeanX(){
+                     floatT IntNominator = 0.;
+                     floatT IntDenominator = 0.;
+                     for (int x = 0; x < _smearEnerDensGrid.getMaxSitesPerDirection(); x++) {
+                            for (int y = 0; y < _smearEnerDensGrid.getMaxSitesPerDirection(); y++) {
+                                   Site tmpSite(x,y);
+                                   if (_smearEnerDensGrid.getSite(tmpSite) != 0.0) {
+                                          floatT realX = tmpSite.x()/100. - 15.;
+                                          IntNominator += (realX * _smearEnerDensGrid.getSite(tmpSite));
+                                          IntDenominator += _smearEnerDensGrid.getSite(tmpSite);
+                                   }
+                            }
+                     }
+                     _meanX = IntNominator / IntDenominator;
+              }
+
+              void _calculateMeanY(){
+                     floatT IntNominator = 0.;
+                     floatT IntDenominator = 0.;
+                     for (int x = 0; x < _smearEnerDensGrid.getMaxSitesPerDirection(); x++) {
+                            for (int y = 0; y < _smearEnerDensGrid.getMaxSitesPerDirection(); y++) {
+                                   Site tmpSite(x,y);
+                                   if (_smearEnerDensGrid.getSite(tmpSite) != 0.0) {
+                                          floatT realY = tmpSite.y()/100. - 15.;
+                                          IntNominator += (realY * _smearEnerDensGrid.getSite(tmpSite));
+                                          IntDenominator += _smearEnerDensGrid.getSite(tmpSite);
+                                   }
+                            }
+                     }
+                     _meanY = IntNominator / IntDenominator;
+              }
+
+       public:
+              //constructor
+              MeanStartingPoint(EnergyDensity<floatT> & newEnergDens):
+                                          _smearEnerDensGrid(* newEnergDens.getSmearedEnergyDensData()),
+                                          _meanX(),
+                                          _meanY() {};
+
+              void calculateMeanXY(){
+                     //calculate the mean x value of the energy density
+                     _calculateMeanX();
+                     //calculate the mean y value of the energy density
+                     _calculateMeanY();
+              }
+
+              floatT getMeanX() {
+                     return _meanX;
+              }
+
+              floatT getMeanY() {
+                     return _meanY;
+              }
 
               friend class Eccentricity<floatT>;
 };
@@ -353,7 +485,7 @@ class Eccentricity{
 
               Grid<floatT> & _smearEnerDensGrid;
 
-              std::vector<std::complex<floatT>> _CounterAngle;
+              std::vector<std::complex<floatT> > _CounterAngle;
               std::vector<floatT> _DenomAngle;
 
               floatT _Ecc2;
@@ -630,6 +762,302 @@ class Eccentricity{
               }
 };
 
+// class to compute the eccentricities e2,p - e6,p for p=n+2
+template<class floatT>
+class EccentricityNP{
+       private:
+              std::vector<floatT> _EventEccentricity;
+
+              Grid<floatT> & _smearEnerDensGrid;
+
+              std::vector<std::complex<floatT> > _CounterAngle;
+              std::vector<floatT> _DenomAngle;
+
+              floatT _Ecc2;
+              floatT _Ecc3;
+              floatT _Ecc4;
+              floatT _Ecc5;
+              floatT _Ecc6;
+
+              floatT _meanX;
+              floatT _meanY;
+
+              // function for the calculation of the mean x value
+              // trapezoidal integration 2D of (int dxdy x*e(x,y))/(int dxdy e(x,y))
+              void inline _calculateMeanX(){
+                     floatT IntNominator = 0.;
+                     floatT IntDenominator = 0.;
+                     for (int x = 0; x < _smearEnerDensGrid.getMaxSitesPerDirection(); x++) {
+                            for (int y = 0; y < _smearEnerDensGrid.getMaxSitesPerDirection(); y++) {
+                                   Site tmpSite(x,y);
+                                   if (_smearEnerDensGrid.getSite(tmpSite) != 0.0) {
+                                          // conversion to real coordinate system
+                                          floatT realX = tmpSite.x()/100. - 15.;
+                                          IntNominator += (realX * _smearEnerDensGrid.getSite(tmpSite));
+                                          IntDenominator += _smearEnerDensGrid.getSite(tmpSite);
+                                   }
+                            }
+                     }
+                     _meanX = IntNominator / IntDenominator;
+              }
+
+              // function for the calculation of the mean y value
+              // trapezoidal integration 2D of (int dxdy y*e(x,y))/(int dxdy e(x,y))
+              void inline _calculateMeanY(){
+                     floatT IntNominator = 0.;
+                     floatT IntDenominator = 0.;
+                     for (int x = 0; x < _smearEnerDensGrid.getMaxSitesPerDirection(); x++) {
+                            for (int y = 0; y < _smearEnerDensGrid.getMaxSitesPerDirection(); y++) {
+                                   Site tmpSite(x,y);
+                                   if (_smearEnerDensGrid.getSite(tmpSite) != 0.0) {
+                                          // conversion to real coordinate system
+                                          floatT realY = tmpSite.y()/100. - 15.;
+                                          IntNominator += (realY * _smearEnerDensGrid.getSite(tmpSite));
+                                          IntDenominator += _smearEnerDensGrid.getSite(tmpSite);
+                                   }
+                            }
+                     }
+                     _meanY = IntNominator / IntDenominator;
+              }
+
+              // compute the ecc2
+              void inline _computeEcc2() {
+                     // define the imaginary I
+                     const std::complex<floatT> I(0.0, 1.0);
+                     std::complex<floatT> IntNominator = (0.0);
+                     floatT IntDenominator = 0.;
+
+                     for (int x = 0; x < _smearEnerDensGrid.getMaxSitesPerDirection(); x++) {
+                            for (int y = 0; y < _smearEnerDensGrid.getMaxSitesPerDirection(); y++) {
+                                   Site tmpSite2(x,y);
+                                   // conversion to real coordinate system shifted by mean values
+                                   floatT realX = (tmpSite2.x()/100. - 15.) - _meanX;
+                                   floatT realY = (tmpSite2.y()/100. - 15.) - _meanY;
+
+                                   // calculated site which is shifted by the mean x,y
+                                   int xs = (int) ((realX + _meanX + 15.)*100.);
+                                   int ys = (int) ((realY + _meanY + 15.)*100.);
+                                   Site tmpSite1(xs,ys);
+
+                                   if (_smearEnerDensGrid.getSite(tmpSite1) != 0.0) {
+                                          IntNominator += (realX*realX + realY*realY)
+                                                        * (realX*realX - realY*realY + 2.0*I*realX*realY)
+                                                        * _smearEnerDensGrid.getSite(tmpSite1);
+
+                                          IntDenominator += (realX*realX + realY*realY)
+                                                        * (realX*realX + realY*realY)
+                                                        * _smearEnerDensGrid.getSite(tmpSite1);
+                                   }
+                            }
+                     }
+                     _Ecc2 = std::abs(IntNominator / IntDenominator);
+              }
+
+              // compute the ecc3
+              void inline _computeEcc3() {
+                     // define the imaginary I
+                     const std::complex<floatT> I(0.0, 1.0);
+                     std::complex<floatT> IntNumerator = (0.0);
+                     floatT IntDenominator = 0.;
+
+                     for (int x = 0; x < _smearEnerDensGrid.getMaxSitesPerDirection(); x++) {
+                            for (int y = 0; y < _smearEnerDensGrid.getMaxSitesPerDirection(); y++) {
+                                   Site tmpSite2(x,y);
+                                   // conversion to real coordinate system shifted by mean values
+                                   floatT realX = (tmpSite2.x()/100. - 15.) - _meanX;
+                                   floatT realY = (tmpSite2.y()/100. - 15.) - _meanY;
+
+                                   // calculated site which is shifted by the mean x,y
+                                   int xs = (int) ((realX + _meanX + 15.)*100.);
+                                   int ys = (int) ((realY + _meanY + 15.)*100.);
+                                   Site tmpSite1(xs,ys);
+
+                                   if (_smearEnerDensGrid.getSite(tmpSite1) != 0.0) {
+                                          IntNumerator += (realX*realX + realY*realY)
+                                                 * (realX*realX*realX - 3.0*realX*realY*realY
+                                                 + I*(3.0*realX*realX*realY - realY*realY*realY))
+                                                 * _smearEnerDensGrid.getSite(tmpSite1);
+
+                                          IntDenominator += ((realX*realX + realY*realY)
+                                                        * (realX*realX + realY*realY)
+                                                        * std::sqrt(realX*realX + realY*realY))
+                                                        * _smearEnerDensGrid.getSite(tmpSite1);
+                                   }
+                            }
+                     }
+                     _Ecc3 = std::abs(IntNumerator / IntDenominator);
+              }
+
+              // compute the ecc4
+              void inline _computeEcc4() {
+                     // define the imaginary I
+                     const std::complex<floatT> I(0.0, 1.0);
+                     std::complex<floatT> IntNumerator = (0.0);
+                     floatT IntDenominator = 0.;
+
+                     for (int x = 0; x < _smearEnerDensGrid.getMaxSitesPerDirection(); x++) {
+                            for (int y = 0; y < _smearEnerDensGrid.getMaxSitesPerDirection(); y++) {
+                                   Site tmpSite2(x,y);
+                                   // conversion to real coordinate system shifted by mean values
+                                   floatT realX = (tmpSite2.x()/100. - 15.) - _meanX;
+                                   floatT realY = (tmpSite2.y()/100. - 15.) - _meanY;
+
+                                   // calculated site which is shifted by the mean x,y
+                                   int xs = (int) ((realX + _meanX + 15.)*100.);
+                                   int ys = (int) ((realY + _meanY + 15.)*100.);
+                                   Site tmpSite1(xs,ys);
+
+                                   if (_smearEnerDensGrid.getSite(tmpSite1) != 0.0) {
+                                          IntNumerator += (realX*realX + realY*realY)
+                                                        * (realX*realX*realX*realX
+                                                        + realY*realY*realY*realY
+                                                        - 6.0*realX*realX*realY*realY
+                                                        + 4.0*I*(realX*realX*realX*realY
+                                                        - realX*realY*realY*realY))
+                                                        * _smearEnerDensGrid.getSite(tmpSite1);
+
+                                          IntDenominator += (realX*realX + realY*realY)
+                                                        * (realX*realX*realX*realX
+                                                        + realY*realY*realY*realY
+                                                        + 2.0*realX*realX*realY*realY)
+                                                        * _smearEnerDensGrid.getSite(tmpSite1);
+                                   }
+                            }
+                     }
+                     _Ecc4 = std::abs(IntNumerator / IntDenominator);
+              }
+
+              // compute the ecc5
+              void inline _computeEcc5() {
+                     // define the imaginary I
+                     const std::complex<floatT> I(0.0, 1.0);
+                     std::complex<floatT> IntNumerator = (0.0);
+                     floatT IntDenominator = 0.;
+
+                     for (int x = 0; x < _smearEnerDensGrid.getMaxSitesPerDirection(); x++) {
+                            for (int y = 0; y < _smearEnerDensGrid.getMaxSitesPerDirection(); y++) {
+                                   Site tmpSite2(x,y);
+                                   // conversion to real coordinate system shifted by mean values
+                                   floatT realX = (tmpSite2.x()/100. - 15.) - _meanX;
+                                   floatT realY = (tmpSite2.y()/100. - 15.) - _meanY;
+
+                                   // calculated site which is shifted by the mean x,y
+                                   int xs = (int) ((realX + _meanX + 15.)*100.);
+                                   int ys = (int) ((realY + _meanY + 15.)*100.);
+                                   Site tmpSite1(xs,ys);
+
+                                   if (_smearEnerDensGrid.getSite(tmpSite1) != 0.0) {
+                                          IntNumerator += (realX*realX + realY*realY)
+                                                 * (realX*realX*realX*realX*realX
+                                                 - 10.0*realX*realX*realX*realY*realY
+                                                 + 5.0*realX*realY*realY*realY*realY
+                                                 + I*(realY*realY*realY*realY*realY
+                                                 + 5.0*realX*realX*realX*realX*realY
+                                                 - 10.0*realX*realX*realY*realY*realY))
+                                                 * _smearEnerDensGrid.getSite(tmpSite1);
+
+                                          IntDenominator += (realX*realX + realY*realY)
+                                                        * ((realX*realX + realY*realY)
+                                                        * (realX*realX + realY*realY)
+                                                        * std::sqrt(realX*realX + realY*realY))
+                                                        * _smearEnerDensGrid.getSite(tmpSite1);
+                                   }
+                            }
+                     }
+                     _Ecc5 = std::abs(IntNumerator / IntDenominator);
+              }
+
+              // compute the ecc6
+              void inline _computeEcc6() {
+                     // define the imaginary I
+                     const std::complex<floatT> I(0.0, 1.0);
+                     std::complex<floatT> IntNumerator = (0.0);
+                     floatT IntDenominator = 0.;
+
+                     for (int x = 0; x < _smearEnerDensGrid.getMaxSitesPerDirection(); x++) {
+                            for (int y = 0; y < _smearEnerDensGrid.getMaxSitesPerDirection(); y++) {
+                                   Site tmpSite2(x,y);
+                                   // conversion to real coordinate system shifted by mean values
+                                   floatT realX = (tmpSite2.x()/100. - 15.) - _meanX;
+                                   floatT realY = (tmpSite2.y()/100. - 15.) - _meanY;
+
+                                   // calculated site which is shifted by the mean x,y
+                                   int xs = (int) ((realX + _meanX + 15.)*100.);
+                                   int ys = (int) ((realY + _meanY + 15.)*100.);
+                                   Site tmpSite1(xs,ys);
+
+                                   if (_smearEnerDensGrid.getSite(tmpSite1) != 0.0) {
+                                          IntNumerator += (realX*realX + realY*realY)
+                                                 * (realX*realX*realX*realX*realX*realX
+                                                 - realY*realY*realY*realY*realY*realY
+                                                 - 15.0*realX*realX*realX*realX*realY*realY
+                                                 + 15.0*realX*realX*realY*realY*realY*realY
+                                                 + I*(6.0*realX*realX*realX*realX*realX*realY
+                                                 - 20.0*realX*realX*realX*realY*realY*realY
+                                                 + 6.0*realX*realY*realY*realY*realY*realY))
+                                                 * _smearEnerDensGrid.getSite(tmpSite1);
+
+                                          IntDenominator += (realX*realX + realY*realY)
+                                                        * (realX*realX*realX*realX*realX*realX
+                                                        + realY*realY*realY*realY*realY*realY
+                                                        + 3.0*realX*realX*realY*realY*realY*realY
+                                                        + 3.0*realX*realX*realX*realX*realY*realY)
+                                                        * _smearEnerDensGrid.getSite(tmpSite1);
+                                   }
+                            }
+                     }
+                     _Ecc6 = std::abs(IntNumerator / IntDenominator);
+              }
+
+
+       public:
+              // constructor
+              EccentricityNP(EnergyDensity<floatT> & newEnergDens):
+                            _EventEccentricity(5),
+                            _smearEnerDensGrid(* newEnergDens.getSmearedEnergyDensData()),
+                            _CounterAngle(5),
+                            _DenomAngle(5),
+                            _Ecc2(),
+                            _Ecc3(),
+                            _Ecc4(),
+                            _Ecc5(),
+                            _Ecc6(),
+                            _meanX(),
+                            _meanY(){}
+
+              // calculate the mean x and y values of e(x,y) and the eccentricities e2,4 ... e6,8 for one event
+              void computeEccentricityNP(){
+                     _calculateMeanX();
+                     _calculateMeanY();
+                     _computeEcc2();
+                     _computeEcc3();
+                     _computeEcc4();
+                     _computeEcc5();
+                     _computeEcc6();
+              }
+
+              // functions to get the values of the eccentricities for one event
+              floatT getEcc24() {
+                     return _Ecc2;
+              }
+
+              floatT getEcc35() {
+                     return _Ecc3;
+              }
+
+              floatT getEcc46() {
+                     return _Ecc4;
+              }
+
+              floatT getEcc57() {
+                     return _Ecc5;
+              }
+
+              floatT getEcc68() {
+                     return _Ecc6;
+              }
+};
+
 int main(int argc, char const *argv[]) {
 
        // read number of events
@@ -647,6 +1075,13 @@ int main(int argc, char const *argv[]) {
        std::cout << "Nucleon Nucleon cross section in mb: \n";
        std::cin >> NNCross;
 
+       // scaling parameter 1 = collision scaling (N_coll)
+       // scaling parameter 2 = participant scaling (N_part (1 or 0))
+       // scaling parameter 3 = mixed scaling e(x,y) = 0.85*N_part(x,y) + 0.15*N_coll(x,y) [arXiv:1112.2761]
+       int ScalingParameter;
+       std::cout << "ScalingParameter (1 = N_coll, 2 = N_part, 3 = mixed (0.85*N_part+0.15*N_coll)):" << '\n';
+       std::cin >> ScalingParameter;
+
        // define size of grid = elems*elems + 2 elems for "axes"
        int elems = 3001;
 
@@ -657,8 +1092,12 @@ int main(int argc, char const *argv[]) {
        fr.readData(NEvents, NNucleonsCore);
 
        // file for the eccentricities
-       std::string filename2 = "Eccentricities.dat";
-       FileWriter<PREC> file2(filename2);
+       std::string filename3 = "Eccentricities.dat";
+       FileWriter<PREC> file3(filename3);
+
+       // file for the eccentricitiesNP
+       std::string filename4 = "EccentricitiesNP.dat";
+       FileWriter<PREC> file4(filename4);
 
        #pragma omp parallel for
        for (int Event = 1; Event <= NEvents; Event++) {
@@ -668,14 +1107,14 @@ int main(int argc, char const *argv[]) {
               Grid<PREC> rawDataGrid(elems);
 
               // build energy density class
-              EnergyDensity<PREC> energDens(NNCross, elems);
+              EnergyDensity<PREC> energDens(NNCross, elems, ScalingParameter);
 
               #pragma omp critical
               // get data from FileReader class
               fr.getData(Event, NNucleonsCore, rawDataGrid);
 
               // calculate the energy density from the data grid
-              energDens.energyDensity(rawDataGrid);
+              energDens.energyDensity(rawDataGrid, ScalingParameter);
 
               // smear the energy density over a predefined radius (in EnergyDensity class)
               energDens.smearedEnergyDensity();
@@ -688,13 +1127,13 @@ int main(int argc, char const *argv[]) {
 
               // write eccentricities in "Eccentricities.dat"
               #pragma omp critical
-              file2  << ecc.getEcc2() << "\t"
+              file3  << ecc.getEcc2() << "\t"
                      << ecc.getEcc3() << "\t"
                      << ecc.getEcc4() << "\t"
                      << ecc.getEcc5() << "\t"
                      << ecc.getEcc6() << std::endl;
 
-              // write one example smeared energy density, only 1/10 of the values --> smaller data file
+              // write one example smeared energy density (only each 10th value)
               if(Event == 1){
                      std::string filename1 = "EDensity.dat";
                      FileWriter<PREC> file1(filename1);
@@ -709,12 +1148,27 @@ int main(int argc, char const *argv[]) {
                             }
                      }
               }
+
+              // build the eccentricity class EccentricityNP with different radial weight
+              EccentricityNP<PREC> eccNP(energDens);
+
+              // compute the EccentricityNP
+              eccNP.computeEccentricityNP();
+
+              // write eccentricitiesNP in "EccentricitiesNP.dat"
+              #pragma omp critical
+              file4  << eccNP.getEcc24() << "\t"
+                     << eccNP.getEcc35() << "\t"
+                     << eccNP.getEcc46() << "\t"
+                     << eccNP.getEcc57() << "\t"
+                     << eccNP.getEcc68() << std::endl;
+
        }
        return 0;
 }
 
-// testing routines
-// test indexer:
+// Testing routines
+// Test indexer:
 void testIndexer(int max){
        Grid<PREC> grid(max);
 
@@ -738,10 +1192,9 @@ void testIndexer(int max){
 
               }
        }
-
 }
 
-// test runThroughGrid()
+//Test runThroughGrid()
 void testRunThroughGrid(int max){
        Grid<PREC> grid(max);
 
@@ -795,7 +1248,6 @@ void testReadWrite() {
        }
 }
 
-
 // Test file reader test
 void testFileReader(){
        // number of events
@@ -830,5 +1282,4 @@ void testFileReader(){
                                << rawDataGrid2.getSite(s3) << '\n';
               }
        } while(rawDataGrid2.runThroughGrid(s3));
-
 }
